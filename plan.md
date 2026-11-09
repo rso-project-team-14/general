@@ -16,7 +16,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 |---|---|
 | Frontend | React + TypeScript, responsive SPA, served by nginx |
 | Backend | Go, REST APIs, one binary per microservice |
-| Data | Database-per-service (one logical DB per service). PostgreSQL for `company-membership`, `participation`, and `donation-impact`. MongoDB for `challenge-campaign`, because challenges have varied, unpredictable shapes that suit a document model better than fixed tables |
+| Data | Database-per-service (one logical DB per service). PostgreSQL for `company-membership`, `participation`, and `donation-impact`. MongoDB for `challenge`, because challenges have varied, unpredictable shapes that suit a document model better than fixed tables |
 | Async messaging | RabbitMQ for business events |
 | Containers | Docker images per service and for the frontend |
 | Orchestration | Kubernetes on Azure Kubernetes Service (AKS) |
@@ -29,7 +29,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Service | Short name | Owns database | Responsibility |
 |---|---|---|---|
 | Company & Membership | `company-membership` | `company_db` | Companies, memberships, invite codes, user roles within a company |
-| Challenge & Campaign | `challenge-campaign` | `challenge_db` (MongoDB) | Challenge templates, campaigns, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision |
+| Challenge | `challenge` | `challenge_db` (MongoDB) | Challenge templates and challenges, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision |
 | Participation | `participation` | `participation_db` | Starting and completing challenges, survey answers, validity checks, repeat-prevention |
 | Donation & Impact | `donation-impact` | `impact_db` | Charity organizations, donation ledger, personal and aggregated impact |
 
@@ -53,12 +53,12 @@ general/
 │       └── stage-3-cloud.md
 ├── api/                            # OpenAPI contracts, one file per service
 │   ├── company-membership.yaml
-│   ├── challenge-campaign.yaml
+│   ├── challenge.yaml
 │   ├── participation.yaml
 │   └── donation-impact.yaml
 ├── services/                       # Go microservices
 │   ├── company-membership/
-│   ├── challenge-campaign/
+│   ├── challenge/
 │   ├── participation/
 │   └── donation-impact/
 ├── frontend/                       # React + TypeScript SPA
@@ -68,12 +68,12 @@ general/
 └── .github/workflows/              # CI/CD pipelines
 ```
 
-Each Go service follows the same internal layout (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge-campaign` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare.
+Each Go service follows the same internal layout (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare.
 
 ### 1.5 Local development environment
 
 - `deploy/docker-compose.yml` starts: one PostgreSQL container that hosts the three relational logical databases (`company_db`, `participation_db`, `impact_db`), one MongoDB container for `challenge_db`, one RabbitMQ container with management UI, the four services, and the frontend.
-- Each PostgreSQL service creates its own database role and schema at startup through its own migrations. `challenge-campaign` creates its own MongoDB user, collections, and indexes at startup.
+- Each PostgreSQL service creates its own database role and schema at startup through its own migrations. `challenge` creates its own MongoDB user, collections, and indexes at startup.
 - MongoDB runs as a single-node replica set locally, because multi-document transactions (needed for the outbox and idempotency, see 1.7) require a replica set.
 - Every service reads its configuration from environment variables only. No config files with secrets are committed.
 
@@ -82,7 +82,7 @@ Each Go service follows the same internal layout (`cmd/`, `internal/http`, `inte
 - **Ports:** HTTP on 8080 inside the container. Ports are set through the Kubernetes Service, not hard-coded elsewhere.
 - **Base path:** REST endpoints live under `/api/v1/...`.
 - **Health:** `GET /healthz` (process alive) and `GET /readyz` (DB and RabbitMQ reachable).
-- **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`. `DATABASE_URL` is a PostgreSQL connection string, except in `challenge-campaign`, where it is a MongoDB connection string.
+- **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`. `DATABASE_URL` is a PostgreSQL connection string, except in `challenge`, where it is a MongoDB connection string.
 - **Logging:** structured JSON logs to stdout. Each request has an `X-Request-ID` header. It is generated at the edge if missing, returned in responses, and included in every log line.
 - **Errors:** RFC 7807 `application/problem+json` for all 4xx and 5xx responses.
 - **Timestamps:** UTC, ISO 8601 with `Z`.
@@ -95,7 +95,7 @@ Each Go service follows the same internal layout (`cmd/`, `internal/http`, `inte
 - **Exchange:** one topic exchange `butterfly.events`, durable.
 - **Routing keys:** `challenge.completed` and `donation.authorized`.
 - **Delivery:** at-least-once. Every consumer must be idempotent.
-- **Queues:** one durable queue per consuming service, bound to the routing keys it needs. For example, `challenge-campaign.challenge-completed`.
+- **Queues:** one durable queue per consuming service, bound to the routing keys it needs. For example, `challenge.challenge-completed`.
 - **Failures:** each queue has a dead-letter exchange `butterfly.events.dlx`. Messages that fail after 3 retries go there and are logged.
 - **Idempotency:** every consumer keeps a `processed_events(event_id PRIMARY KEY, processed_at)` table in its own database (a `processed_events` collection with `event_id` as `_id` in `challenge_db`). The event is applied and recorded in the same transaction.
 
@@ -116,8 +116,8 @@ Event catalog (from the project brief):
 
 | Event | Producer | Consumers | Payload (summary) |
 |---|---|---|---|
-| `ChallengeCompleted` | participation | challenge-campaign | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt`, `answersValid` |
-| `DonationAuthorized` | challenge-campaign | donation-impact | `donationId`, `campaignId`, `companyId`, `organizationId`, `amount`, `currency`, `sourceChallengeIds` |
+| `ChallengeCompleted` | participation | challenge | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt`, `answersValid` |
+| `DonationAuthorized` | challenge | donation-impact | `donationId`, `challengeId`, `companyId`, `organizationId`, `amount`, `currency`, `sourceChallengeIds` |
 
 Payloads are versioned through the `version` field. A breaking change means a new version number, and the old version stays supported until all consumers have moved on.
 
@@ -208,10 +208,10 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 - Stores membership and role (`employee` or `representative`).
 - Answers "who is this user's company" for other services through REST. Other services never query `company_db`.
 
-**Challenge & Campaign (`challenge-campaign`)**
+**Challenge (`challenge`)**
 - Representatives create challenges with type (`personal` or `group`), validity period, goal, budget, and amount per successful completion.
 - Publishes a challenge to the employees of its company.
-- Consumes `ChallengeCompleted`, updates group progress, and checks the campaign rule and remaining budget.
+- Consumes `ChallengeCompleted`, updates group progress, and checks the challenge's donation rule and remaining budget.
 - When the conditions for a donation are met, publishes `DonationAuthorized` and decreases the remaining budget in the same transaction as the outbox record.
 
 **Participation (`participation`)**
@@ -222,7 +222,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 **Donation & Impact (`donation-impact`)**
 - Stores charity organizations (seeded or managed through an admin endpoint, to be decided).
 - Consumes `DonationAuthorized` idempotently and writes a donation ledger entry.
-- Computes personal impact (per user) and aggregated impact (per company and per campaign, no names).
+- Computes personal impact (per user) and aggregated impact (per company and per challenge, no names).
 
 **Frontend (`frontend`)**
 - Login and company join flow.
@@ -235,7 +235,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 
 1. The user completes a group challenge in the frontend. The request goes to `participation`.
 2. `participation` validates the submission, records completion, writes a `ChallengeCompleted` event to its outbox, and publishes it.
-3. `challenge-campaign` consumes the event, updates group progress, checks the campaign rule and the remaining budget, and emits `DonationAuthorized` if the conditions are met.
+3. `challenge` consumes the event, updates group progress, checks the challenge's donation rule and the remaining budget, and emits `DonationAuthorized` if the conditions are met.
 4. `donation-impact` consumes `DonationAuthorized` idempotently, creates the ledger entry, and updates the impact view.
 5. The frontend fetches updated progress and impact from the REST APIs.
 

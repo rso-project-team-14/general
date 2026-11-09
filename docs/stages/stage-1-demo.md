@@ -9,9 +9,9 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 ## Scope
 
 ### In scope
-- Four Go services (`company-membership`, `challenge-campaign`, `participation`, `donation-impact`), each with:
+- Four Go services (`company-membership`, `challenge`, `participation`, `donation-impact`), each with:
   - `GET /healthz`: process is alive.
-  - `GET /readyz`: can reach its own database (PostgreSQL, or MongoDB for `challenge-campaign`) and RabbitMQ.
+  - `GET /readyz`: can reach its own database (PostgreSQL, or MongoDB for `challenge`) and RabbitMQ.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
 - One PostgreSQL instance with three logical databases (`company_db`, `participation_db`, `impact_db`) and one MongoDB instance with `challenge_db`, one database per service, all empty.

@@ -16,7 +16,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 |---|---|
 | Frontend | React + TypeScript, responsive SPA, served by nginx |
 | Backend | Go, REST APIs, one binary per microservice |
-| Data | PostgreSQL, database-per-service (one logical DB per service) |
+| Data | Database-per-service (one logical DB per service). PostgreSQL for `company-membership`, `participation`, and `donation-impact`. MongoDB for `challenge-campaign`, because challenges have varied, unpredictable shapes that suit a document model better than fixed tables |
 | Async messaging | RabbitMQ for business events |
 | Containers | Docker images per service and for the frontend |
 | Orchestration | Kubernetes on Azure Kubernetes Service (AKS) |
@@ -29,7 +29,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Service | Short name | Owns database | Responsibility |
 |---|---|---|---|
 | Company & Membership | `company-membership` | `company_db` | Companies, memberships, invite codes, user roles within a company |
-| Challenge & Campaign | `challenge-campaign` | `challenge_db` | Challenge templates, campaigns, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision |
+| Challenge & Campaign | `challenge-campaign` | `challenge_db` (MongoDB) | Challenge templates, campaigns, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision |
 | Participation | `participation` | `participation_db` | Starting and completing challenges, survey answers, validity checks, repeat-prevention |
 | Donation & Impact | `donation-impact` | `impact_db` | Charity organizations, donation ledger, personal and aggregated impact |
 
@@ -68,12 +68,13 @@ general/
 └── .github/workflows/              # CI/CD pipelines
 ```
 
-Each Go service follows the same internal layout (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/`). The same layout keeps the services easy to review and to compare.
+Each Go service follows the same internal layout (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge-campaign` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare.
 
 ### 1.5 Local development environment
 
-- `deploy/docker-compose.yml` starts: one PostgreSQL container that hosts the four logical databases, one RabbitMQ container with management UI, the four services, and the frontend.
-- Each service creates its own database role and schema at startup through its own migrations.
+- `deploy/docker-compose.yml` starts: one PostgreSQL container that hosts the three relational logical databases (`company_db`, `participation_db`, `impact_db`), one MongoDB container for `challenge_db`, one RabbitMQ container with management UI, the four services, and the frontend.
+- Each PostgreSQL service creates its own database role and schema at startup through its own migrations. `challenge-campaign` creates its own MongoDB user, collections, and indexes at startup.
+- MongoDB runs as a single-node replica set locally, because multi-document transactions (needed for the outbox and idempotency, see 1.7) require a replica set.
 - Every service reads its configuration from environment variables only. No config files with secrets are committed.
 
 ### 1.6 Runtime conventions (apply to every service)
@@ -81,7 +82,7 @@ Each Go service follows the same internal layout (`cmd/`, `internal/http`, `inte
 - **Ports:** HTTP on 8080 inside the container. Ports are set through the Kubernetes Service, not hard-coded elsewhere.
 - **Base path:** REST endpoints live under `/api/v1/...`.
 - **Health:** `GET /healthz` (process alive) and `GET /readyz` (DB and RabbitMQ reachable).
-- **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`.
+- **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`. `DATABASE_URL` is a PostgreSQL connection string, except in `challenge-campaign`, where it is a MongoDB connection string.
 - **Logging:** structured JSON logs to stdout. Each request has an `X-Request-ID` header. It is generated at the edge if missing, returned in responses, and included in every log line.
 - **Errors:** RFC 7807 `application/problem+json` for all 4xx and 5xx responses.
 - **Timestamps:** UTC, ISO 8601 with `Z`.
@@ -96,7 +97,7 @@ Each Go service follows the same internal layout (`cmd/`, `internal/http`, `inte
 - **Delivery:** at-least-once. Every consumer must be idempotent.
 - **Queues:** one durable queue per consuming service, bound to the routing keys it needs. For example, `challenge-campaign.challenge-completed`.
 - **Failures:** each queue has a dead-letter exchange `butterfly.events.dlx`. Messages that fail after 3 retries go there and are logged.
-- **Idempotency:** every consumer keeps a `processed_events(event_id PRIMARY KEY, processed_at)` table in its own database. The event is applied and recorded in the same transaction.
+- **Idempotency:** every consumer keeps a `processed_events(event_id PRIMARY KEY, processed_at)` table in its own database (a `processed_events` collection with `event_id` as `_id` in `challenge_db`). The event is applied and recorded in the same transaction.
 
 Event envelope (JSON, every event):
 
@@ -122,8 +123,9 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 
 ### 1.8 Data ownership and schema rules
 
-- One logical database per service. All four live in the same PostgreSQL instance locally and in AKS, but each has its own role with access to its own database only.
-- Schema changes go through versioned migration files in each service's `migrations/` folder, applied at startup.
+- One logical database per service. The three PostgreSQL databases live in the same PostgreSQL instance locally and in AKS. `challenge_db` lives in a separate MongoDB instance. Each service has its own credentials with access to its own database only.
+- PostgreSQL schema changes go through versioned migration files in each service's `migrations/` folder, applied at startup.
+- MongoDB (`challenge_db`) has no fixed table schema, so the flexible challenge shape is allowed. Fields every challenge must have (type, validity period, goal, budget, amount per success) are enforced by a MongoDB JSON Schema validator on the `challenges` collection. Challenge-specific content (for example survey questions) can vary per challenge. Indexes are created at startup.
 - No foreign keys across databases. A reference to another service's entity is a plain UUID.
 - Monetary amounts are stored as integers in cents, with an ISO 4217 currency code.
 
@@ -143,7 +145,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - Readiness and liveness probes use `/readyz` and `/healthz`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
 - An Ingress routes `/` to the frontend and `/api/` to the services, with path-based routing to each service.
-- PostgreSQL and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or Azure managed services.
+- PostgreSQL, MongoDB, and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or managed services.
 
 ### 1.11 CI/CD
 
@@ -159,7 +161,7 @@ Container registry: **open decision**, see 1.12. Default assumption: Azure Conta
 These need an answer from the team or the course staff. Each stage document lists the decisions it depends on.
 
 1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Not needed for Stage 1.
-2. **Data services in AKS:** in-cluster PostgreSQL and RabbitMQ through Helm, or Azure Database for PostgreSQL and a RabbitMQ container. Needed for Stage 1.
+2. **Data services in AKS:** in-cluster PostgreSQL, MongoDB, and RabbitMQ through Helm, or Azure Database for PostgreSQL, a managed MongoDB-compatible service (for example Azure Cosmos DB for MongoDB), and a RabbitMQ container. Needed for Stage 1.
 3. **Infrastructure as code:** plain Azure CLI scripts, or Terraform / Bicep for the AKS cluster. Needed for Stage 1.
 4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.
@@ -234,7 +236,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 4. `donation-impact` consumes `DonationAuthorized` idempotently, creates the ledger entry, and updates the impact view.
 5. The frontend fetches updated progress and impact from the REST APIs.
 
-Note on the transactional outbox: each service that publishes events writes them into an `outbox` table in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. It is not part of Stage 1.
+Note on the transactional outbox: each service that publishes events writes them into an `outbox` table (an `outbox` collection in `challenge_db`) in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. It is not part of Stage 1.
 
 ### 2.3 Delivery stages
 

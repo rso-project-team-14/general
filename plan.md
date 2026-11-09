@@ -42,38 +42,44 @@ Communication rules:
 - A service that needs data from another service calls its REST API or subscribes to events.
 - Known synchronous dependency: `participation` calls `challenge` to validate a submission (see 2.1, "Responsibility split").
 
-### 1.4 Repository layout (monorepo)
+### 1.4 Repository layout (multi-repo)
+
+The project uses one repository per service, plus this `general` repository. `general` is only for planning and project management and contains no implementation code (see `CLAUDE.md`).
+
+| Repository | Content |
+|---|---|
+| `general` | Plan, stage documents, API contracts, changelog, project-wide issues |
+| `company-service` | `company-membership` service |
+| `challenge-service` | `challenge` service |
+| `participation-service` | `participation` service |
+| `impact-service` | `donation-impact` service |
+
+The frontend and the deployment files (Helm charts, local docker-compose stack) have no repository yet. Where they live is an open decision, see 1.12 item 12.
+
+Layout of `general`:
 
 ```
 general/
+├── CLAUDE.md                       # rules for working in this repo
+├── CHANGELOG.md                    # log of changes, read by the service repos
 ├── plan.md                         # this file
 ├── docs/
 │   └── stages/                     # one document per delivery stage
 │       ├── stage-1-demo.md
 │       ├── stage-2-mvp.md
 │       └── stage-3-cloud.md
-├── api/                            # OpenAPI contracts, one file per service
-│   ├── company-membership.yaml
-│   ├── challenge.yaml
-│   ├── participation.yaml
-│   └── donation-impact.yaml
-├── services/                       # Go microservices
-│   ├── company-membership/
-│   ├── challenge/
-│   ├── participation/
-│   └── donation-impact/
-├── frontend/                       # React + TypeScript SPA
-├── deploy/
-│   ├── docker-compose.yml          # local development stack
-│   └── helm/                       # Helm charts (umbrella chart + per-service values)
-└── .github/workflows/              # CI/CD pipelines
+└── api/                            # API contracts between services, one OpenAPI file per service
+    ├── company-membership.yaml
+    ├── challenge.yaml
+    ├── participation.yaml
+    └── donation-impact.yaml
 ```
 
-Each Go service follows the same internal layout (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare.
+Each Go service follows the same internal layout in its own repository (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare.
 
 ### 1.5 Local development environment
 
-- `deploy/docker-compose.yml` starts: one PostgreSQL container that hosts the three relational logical databases (`company_db`, `participation_db`, `impact_db`), one MongoDB container for `challenge_db`, one RabbitMQ container with management UI, the four services, and the frontend.
+- A local docker-compose stack (location: open decision, see 1.12 item 12) starts: one PostgreSQL container that hosts the three relational logical databases (`company_db`, `participation_db`, `impact_db`), one MongoDB container for `challenge_db`, one RabbitMQ container with management UI, the four services, and the frontend.
 - Each PostgreSQL service creates its own database role and schema at startup through its own migrations. `challenge` creates its own MongoDB user, collections, and indexes at startup.
 - MongoDB runs as a single-node replica set locally, because multi-document transactions (needed for the outbox and idempotency, see 1.7) require a replica set.
 - Every service reads its configuration from environment variables only. No config files with secrets are committed.
@@ -177,6 +183,7 @@ These need an answer from the team or the course staff. Each stage document list
 9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
 10. **Validity window race:** a submission is validated against the window at the submission timestamp, but recorded a moment later. Is passing the submission timestamp to `validate-submission` enough, or must the window also be re-checked when the completion is recorded?
 11. **Should `participation` stay a separate service?** With validation in `challenge`, `participation` is thin (attempts, answers, repeat-prevention, history). It is kept separate for now because per-user attempts and group-wide counters are different consistency problems. Revisit if the calls between the two become chatty or `participation` stays this thin.
+12. **Where do the frontend and the deployment files live?** The frontend needs a repository. The umbrella Helm chart and the local docker-compose stack need a home too: a new `deploy` repository, the `general` repository (against its planning-only rule), or each service repo with its own chart.
 
 ### 1.13 Git workflow and environments
 

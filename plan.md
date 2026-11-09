@@ -162,10 +162,10 @@ Container registry: **open decision**, see 1.12. Default assumption: Azure Conta
 
 These need an answer from the team or the course staff. Each stage document lists the decisions it depends on.
 
-1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Default assumption for Stage 2: option (a).
-2. **Data services in AKS:** in-cluster PostgreSQL and RabbitMQ through Helm, or Azure Database for PostgreSQL and a RabbitMQ container. Default assumption: in-cluster for Stage 3.
-3. **Infrastructure as code:** plain Azure CLI scripts, or Terraform / Bicep for the AKS cluster. Default assumption: Azure CLI scripts documented in the stage 3 document.
-4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Default assumption: seeded data plus an admin endpoint in Stage 2.
+1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Not needed for Stage 1.
+2. **Data services in AKS:** in-cluster PostgreSQL and RabbitMQ through Helm, or Azure Database for PostgreSQL and a RabbitMQ container. Needed for Stage 1.
+3. **Infrastructure as code:** plain Azure CLI scripts, or Terraform / Bicep for the AKS cluster. Needed for Stage 1.
+4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.
 6. **Frontend language:** Slovenian, English, or both. Default assumption: English UI with Slovenian project docs.
 
@@ -195,7 +195,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 - Publishes `ChallengeCompleted` on success, using a transactional outbox so the event is never lost after the DB commit.
 
 **Donation & Impact (`donation-impact`)**
-- Stores charity organizations (seeded, plus admin endpoint in Stage 2).
+- Stores charity organizations (seeded or managed through an admin endpoint, to be decided).
 - Consumes `DonationAuthorized` idempotently and writes a donation ledger entry.
 - Computes personal impact (per user) and aggregated impact (per company and per campaign, no names).
 
@@ -214,17 +214,17 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 4. `donation-impact` consumes `DonationAuthorized` idempotently, creates the ledger entry, and updates the impact view.
 5. The frontend fetches updated progress and impact from the REST APIs.
 
-Note on the transactional outbox: each service that publishes events writes them into an `outbox` table in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. Stage 2 introduces it.
+Note on the transactional outbox: each service that publishes events writes them into an `outbox` table in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. It is not part of Stage 1.
 
 ### 2.3 Delivery stages
 
 | Stage | Document | Goal |
 |---|---|---|
-| 1 | [docs/stages/stage-1-demo.md](docs/stages/stage-1-demo.md) | Basic demo: every service runs locally, one happy-path flow works end to end |
-| 2 | [docs/stages/stage-2-mvp.md](docs/stages/stage-2-mvp.md) | Minimum viable product: real business rules, auth, OpenAPI contracts, idempotent events, outbox |
-| 3 | [docs/stages/stage-3-cloud.md](docs/stages/stage-3-cloud.md) | Cloud delivery: Docker images, Helm, AKS, GitHub Actions CI/CD, observability |
+| 1 | [docs/stages/stage-1-demo.md](docs/stages/stage-1-demo.md) | Basic demo: no business logic, the services only answer basic API requests and run in the cloud environment |
+| 2 | [docs/stages/stage-2-mvp.md](docs/stages/stage-2-mvp.md) | Minimum viable product (to be planned) |
+| 3 | [docs/stages/stage-3-cloud.md](docs/stages/stage-3-cloud.md) | To be planned |
 
-Later stages (polish, extra features, load testing) will be added as further documents when Stage 3 is done.
+Stages 2 and 3 are empty placeholders. They will be planned after Stage 1 is done.
 
 ### 2.4 Definition of done (applies to every stage)
 

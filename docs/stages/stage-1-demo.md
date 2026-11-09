@@ -24,7 +24,7 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 
 ## Checklist
 
-- [ ] The four service repositories and the frontend repository set up as described in `plan.md` 1.4 (location of the frontend is open, see `plan.md` 1.12 item 12)
+- [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4 (the location of the deployment files is open, see `plan.md` 1.12 item 12)
 - [ ] Each service responds on `/healthz`, `/readyz`, and `/api/v1/ping`
 - [ ] `/readyz` fails when the service's own database or RabbitMQ is unreachable
 - [ ] Frontend page shows the ping result for all four services

@@ -22,7 +22,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Orchestration | Kubernetes on Azure Kubernetes Service (AKS) |
 | Deployment | Helm charts |
 | CI/CD | GitHub Actions: build, test, image push, Helm deploy |
-| API contracts | OpenAPI 3 files, one per service, kept in the repo |
+| API contracts | Planned contracts are documents in `general` (`api/`). Once a service is implemented, its OpenAPI 3 spec lives in the service repository and is the truth |
 
 ### 1.3 Services at a glance
 
@@ -33,7 +33,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Participation | `participation` | `participation_db` | Starting and completing challenges, storing submitted answers, repeat-prevention. Delegates validation to Challenge |
 | Donation & Impact | `donation-impact` | `impact_db` | Charity organizations, donation ledger, personal and aggregated impact |
 
-The frontend is a separate deployable. It has no database.
+The frontend is a separate deployable in its own repository. It has no database.
 
 Communication rules:
 - Synchronous calls: REST over HTTPS, JSON, through the frontend's nginx reverse proxy or the Kubernetes ingress.
@@ -42,40 +42,45 @@ Communication rules:
 - A service that needs data from another service calls its REST API or subscribes to events.
 - Known synchronous dependency: `participation` calls `challenge` to validate a submission (see 2.1, "Responsibility split").
 
-### 1.4 Repository layout (multi-repo)
+### 1.4 Repositories
 
-The project uses one repository per service, plus this `general` repository. `general` is only for planning and project management and contains no implementation code (see `CLAUDE.md`).
+There is no monorepo. Every microservice has its own repository, the frontend has its own repository, and `general` holds documentation only.
 
 | Repository | Content |
 |---|---|
-| `general` | Plan, stage documents, API contracts, changelog, project-wide issues |
+| `general` | Documentation: plan, stage documents, planned API contracts, changelog, project-wide issues. No implementation code (see `CLAUDE.md`) |
 | `company-service` | `company-membership` service |
 | `challenge-service` | `challenge` service |
 | `participation-service` | `participation` service |
 | `impact-service` | `donation-impact` service |
+| `frontend` | React + TypeScript frontend (repository to be created) |
 
-The frontend and the deployment files (Helm charts, local docker-compose stack) have no repository yet. Where they live is an open decision, see 1.12 item 12.
+Where the deployment files (Helm charts, local docker-compose stack) live is an open decision, see 1.12 item 12.
+
+**Source of truth for API contracts**
+- Before implementation, the planned contract lives in `general` (`api/`). It is a contract document, not an OpenAPI spec.
+- After implementation, the truth lives in the service repository: its code and its OpenAPI spec. The contract in `general` is the plan the service was built from.
 
 Layout of `general`:
 
 ```
 general/
 ├── CLAUDE.md                       # rules for working in this repo
-├── CHANGELOG.md                    # log of changes, read by the service repos
+├── CHANGELOG.md                    # log of changes, read by the other repos
 ├── plan.md                         # this file
 ├── docs/
 │   └── stages/                     # one document per delivery stage
 │       ├── stage-1-demo.md
 │       ├── stage-2-mvp.md
 │       └── stage-3-cloud.md
-└── api/                            # API contracts between services, one OpenAPI file per service
-    ├── company-membership.yaml
-    ├── challenge.yaml
-    ├── participation.yaml
-    └── donation-impact.yaml
+└── api/                            # planned API contracts, one document per service
+    ├── company-membership.md
+    ├── challenge.md
+    ├── participation.md
+    └── donation-impact.md
 ```
 
-Each Go service follows the same internal layout in its own repository (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare.
+Each Go service follows the same internal layout in its own repository (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare. The frontend is not a Go project and has its own layout.
 
 ### 1.5 Local development environment
 
@@ -183,7 +188,7 @@ These need an answer from the team or the course staff. Each stage document list
 9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
 10. **Validity window race:** a submission is validated against the window at the submission timestamp, but recorded a moment later. Is passing the submission timestamp to `validate-submission` enough, or must the window also be re-checked when the completion is recorded?
 11. **Should `participation` stay a separate service?** With validation in `challenge`, `participation` is thin (attempts, answers, repeat-prevention, history). It is kept separate for now because per-user attempts and group-wide counters are different consistency problems. Revisit if the calls between the two become chatty or `participation` stays this thin.
-12. **Where do the frontend and the deployment files live?** The frontend needs a repository. The umbrella Helm chart and the local docker-compose stack need a home too: a new `deploy` repository, the `general` repository (against its planning-only rule), or each service repo with its own chart.
+12. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
 
 ### 1.13 Git workflow and environments
 
@@ -284,6 +289,6 @@ Stages 2 and 3 are empty placeholders. They will be planned after Stage 1 is don
 
 - Code merged to the main branch through a reviewed pull request.
 - Unit tests for domain rules, integration tests for each service's REST API and DB layer.
-- OpenAPI contract matches the implementation.
+- The service's OpenAPI spec (in its own repository) matches the implementation, and any difference from the planned contract in `general` is logged in `CHANGELOG.md`.
 - The stage document's checklist is fully ticked, or open items are moved to the next stage with a note.
 - `plan.md` is updated if an infrastructure decision changed.

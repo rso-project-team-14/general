@@ -6,6 +6,10 @@ Each entry: date, title, description.
 
 ---
 
+## 2026-11-09: No monorepo; general is documentation only
+
+Removed the monorepo description from `plan.md`. Section 1.4 now states that every microservice and the frontend each have their own repository (`frontend` to be created), and `general` holds documentation only. Planned API contracts live in `general/api/` as contract documents, not OpenAPI specs. After implementation, the truth is the service's code and its own OpenAPI spec. Updated the stack table, the definition of done, open decision 12 (now only about deployment files), and the Stage 1 checklist. Removed the Git workflow section from `CLAUDE.md`; the branching strategy stays in `plan.md` 1.13 only.
+
 ## 2026-11-09: Repository is planning only; multi-repo layout
 
 `general` is declared the planning and project-management repository, with no implementation code (new `CLAUDE.md`). Section 1.4 of `plan.md` now describes the multi-repo layout: `general` holds the plan, stage documents, and API contracts, and each service has its own repository. Added this changelog. The location of the frontend and of deployment files (Helm, docker-compose) is a new open decision (`plan.md` 1.12 item 12). Stage 1 checklist adjusted.

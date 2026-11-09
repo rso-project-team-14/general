@@ -29,8 +29,8 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Service | Short name | Owns database | Responsibility |
 |---|---|---|---|
 | Company & Membership | `company-membership` | `company_db` | Companies, memberships, invite codes, user roles within a company |
-| Challenge | `challenge` | `challenge_db` (MongoDB) | Challenge templates and challenges, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision |
-| Participation | `participation` | `participation_db` | Starting and completing challenges, survey answers, validity checks, repeat-prevention |
+| Challenge | `challenge` | `challenge_db` (MongoDB) | Challenge templates and challenges, questions, business rules (validity, goal, budget, amount per success), **validation of submitted answers**, group progress, donation trigger decision |
+| Participation | `participation` | `participation_db` | Starting and completing challenges, storing submitted answers, repeat-prevention. Delegates validation to Challenge |
 | Donation & Impact | `donation-impact` | `impact_db` | Charity organizations, donation ledger, personal and aggregated impact |
 
 The frontend is a separate deployable. It has no database.
@@ -40,6 +40,7 @@ Communication rules:
 - Asynchronous calls: RabbitMQ events, see section 1.7.
 - A service never reads or writes another service's database.
 - A service that needs data from another service calls its REST API or subscribes to events.
+- Known synchronous dependency: `participation` calls `challenge` to validate a submission (see 2.1, "Responsibility split").
 
 ### 1.4 Repository layout (monorepo)
 
@@ -116,8 +117,10 @@ Event catalog (from the project brief):
 
 | Event | Producer | Consumers | Payload (summary) |
 |---|---|---|---|
-| `ChallengeCompleted` | participation | challenge | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt`, `answersValid` |
+| `ChallengeCompleted` | participation | challenge | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt` |
 | `DonationAuthorized` | challenge | donation-impact | `donationId`, `challengeId`, `companyId`, `organizationId`, `amount`, `currency`, `sourceChallengeIds` |
+
+`ChallengeCompleted` is only published after the submission passed validation in `challenge`, so the payload carries no validity flag. Whether payloads carry `userId` is an open decision, see 1.12 item 9.
 
 Payloads are versioned through the `version` field. A breaking change means a new version number, and the old version stays supported until all consumers have moved on.
 
@@ -169,6 +172,11 @@ These need an answer from the team or the course staff. Each stage document list
 4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.
 6. **Frontend language:** Slovenian, English, or both. Default assumption: English UI with Slovenian project docs.
+7. **Donation timing:** does a donation fire on every successful completion (capped by the remaining budget, using the amount per success), or once when the group goal is reached? This decides the core logic of the `challenge` service.
+8. **Personal challenges:** do they use the same flow as group challenges? If yes, is the goal of a personal challenge just one completion by that user, and does it also trigger a donation?
+9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
+10. **Validity window race:** a submission is validated against the window at the submission timestamp, but recorded a moment later. Is passing the submission timestamp to `validate-submission` enough, or must the window also be re-checked when the completion is recorded?
+11. **Should `participation` stay a separate service?** With validation in `challenge`, `participation` is thin (attempts, answers, repeat-prevention, history). It is kept separate for now because per-user attempts and group-wide counters are different consistency problems. Revisit if the calls between the two become chatty or `participation` stays this thin.
 
 ### 1.13 Git workflow and environments
 
@@ -209,15 +217,19 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 - Answers "who is this user's company" for other services through REST. Other services never query `company_db`.
 
 **Challenge (`challenge`)**
-- Representatives create challenges with type (`personal` or `group`), validity period, goal, budget, and amount per successful completion.
-- Publishes a challenge to the employees of its company.
+- Representatives create challenges with type (`personal` or `group`), questions, validity period, goal, budget, and amount per successful completion.
+- Publishes a challenge to the employees of its company. A published challenge is immutable or versioned, so a change never affects a submission already in progress.
+- Owns validation. It exposes a stateless, side-effect-free endpoint such as `POST /api/v1/challenges/{id}/validate-submission`, which takes the answers and a submission timestamp and returns `{valid, errors, challengeVersion}`. It checks the validity window, the challenge status, and the answers against the questions.
+- Serves the challenge and its questions to the frontend directly.
 - Consumes `ChallengeCompleted`, updates group progress, and checks the challenge's donation rule and remaining budget.
 - When the conditions for a donation are met, publishes `DonationAuthorized` and decreases the remaining budget in the same transaction as the outbox record.
 
 **Participation (`participation`)**
-- Starts a challenge for a user, records answers to the survey, and checks the completion rules.
+- Starts a challenge for a user and stores the submitted answers as opaque data. It does not interpret questions or rules and has no per-challenge-type logic.
+- Calls `challenge` to validate the submission. If `challenge` is unavailable, completion fails with a retryable error (503). Answers are never accepted without validation.
 - Enforces repeat-prevention: a user cannot complete the same challenge twice inside its window.
-- Publishes `ChallengeCompleted` on success, using a transactional outbox so the event is never lost after the DB commit.
+- On a valid submission, records the completion and publishes `ChallengeCompleted` using a transactional outbox, so the event is never lost after the DB commit.
+- Serves the user's history of completed challenges.
 
 **Donation & Impact (`donation-impact`)**
 - Stores charity organizations (seeded or managed through an admin endpoint, to be decided).
@@ -227,14 +239,24 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 **Frontend (`frontend`)**
 - Login and company join flow.
 - Challenge list with filters (personal, group, open, completed).
-- Survey view and completion.
+- Survey view and completion (questions are loaded from `challenge`, answers are submitted to `participation`).
 - Impact dashboards for the user and for the company representative.
 - Challenge creation form for the representative.
 
+**Responsibility split between Challenge and Participation (decided)**
+
+`challenge` knows what is asked and what it is worth, plus the collective result. `participation` knows what one user did. Anything that needs other users' data (group progress, remaining budget, donation decision) belongs to `challenge`. Anything about a single user's submission (the attempt, repeat-prevention, history) belongs to `participation`.
+
+Validation lives in `challenge`, next to the rules and the question format, because challenge shapes are unpredictable (the reason for MongoDB). This means:
+- A new challenge type only changes `challenge`. `participation` stays generic.
+- `participation` keeps no copy or snapshot of the challenge definition.
+- `challenge` is on the critical path when a user completes a challenge. This dependency is accepted.
+- Validation at completion and the later budget or goal check in the `ChallengeCompleted` handler can disagree, for example if the challenge runs out of budget in between. A valid submission that contributes nothing to a donation is a normal outcome, not an error.
+
 ### 2.2 Cross-service flow (the complex use case from the brief)
 
-1. The user completes a group challenge in the frontend. The request goes to `participation`.
-2. `participation` validates the submission, records completion, writes a `ChallengeCompleted` event to its outbox, and publishes it.
+1. The user completes a group challenge in the frontend. The questions came from `challenge`, and the answers are submitted to `participation`.
+2. `participation` calls `challenge` to validate the submission. If it is valid and the user has not already completed the challenge, `participation` records the completion, writes a `ChallengeCompleted` event to its outbox, and publishes it.
 3. `challenge` consumes the event, updates group progress, checks the challenge's donation rule and the remaining budget, and emits `DonationAuthorized` if the conditions are met.
 4. `donation-impact` consumes `DonationAuthorized` idempotently, creates the ledger entry, and updates the impact view.
 5. The frontend fetches updated progress and impact from the REST APIs.

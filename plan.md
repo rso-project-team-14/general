@@ -153,7 +153,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 
 GitHub Actions workflows:
 1. **On pull request:** lint, unit tests, OpenAPI validation, Docker build (no push).
-2. **On merge to main:** build and tag images, push to the container registry, run `helm upgrade --install` against the AKS cluster.
+2. **On merge to main:** build and tag images, push to the container registry, run `helm upgrade --install` against the AKS cluster for the `staging` environment (see 1.13 for the branching model and environments).
 3. **Manual:** deploy a chosen image tag to a chosen environment.
 
 Container registry: **open decision**, see 1.12. Default assumption: Azure Container Registry.
@@ -168,6 +168,30 @@ These need an answer from the team or the course staff. Each stage document list
 4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.
 6. **Frontend language:** Slovenian, English, or both. Default assumption: English UI with Slovenian project docs.
+
+### 1.13 Git workflow and environments
+
+Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (branching strategy research), part of the broader git-practices issue [#5](https://github.com/rso-project-team-14/general/issues/5).
+
+**Branching model: GitHub Flow.**
+- `main` is the only long-lived branch and is always deployable.
+- All work happens on short-lived branches created from `main` and merged back through a pull request.
+- A long-living `dev` branch is deliberately **not** used: long-living branches drift away from production code.
+
+**Staging through GitHub Environments, not branches.**
+- A `staging` environment exists so the microservices can be tested together in a realistic setting before release.
+- It is implemented with GitHub Environments (for environment-scoped secrets, variables, and optional approvals), not with a separate branch.
+- Changes merged to `main` deploy to `staging` first. Promotion to the next environment is a separate, approved workflow step.
+
+**Feature flags are not used.**
+- Deployment and release do not need to be decoupled in this project, and flags would make the code harder to read.
+- Unfinished work stays on its branch until it is ready to merge, so branches must stay small and short-lived.
+
+**Still to be agreed in issue #5** (the issue only settled the model above):
+- Branch naming convention.
+- Pull request and review rules (required approvals, required checks, merge method).
+- Commit format. Conventional Commits is already assumed in #5.
+- Whether a production environment is created and how promotion from `staging` to it is approved.
 
 ---
 

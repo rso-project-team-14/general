@@ -1,9 +1,5 @@
 # Butterfly Give: Project Plan
 
-Team **Butterfly** (group 14): Žan Roštan, Vojko Hysz.
-Course: Računalniške storitve v oblaku 2026/27 (Cloud Computing Services 2026/27).
-Source of requirements: `RSO_Ekipa14_Butterfly.pdf` (project topic registration, 25 Oct 2026).
-
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
 ---

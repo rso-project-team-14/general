@@ -149,10 +149,13 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 
 ### 1.11 CI/CD
 
+GitHub Actions builds, tests, and deploys the system. Deployments target two **GitHub Environments**, `staging` and `production`. Each environment holds its own secrets, variables, and optional protection rules (such as required reviewers), so the same workflow deploys to either one. See 1.13 for the branching model.
+
 GitHub Actions workflows:
 1. **On pull request:** lint, unit tests, OpenAPI validation, Docker build (no push).
-2. **On merge to main:** build and tag images, push to the container registry, run `helm upgrade --install` against the AKS cluster for the `staging` environment (see 1.13 for the branching model and environments).
-3. **Manual:** deploy a chosen image tag to a chosen environment.
+2. **On merge to main:** build and tag images, push to the container registry, and deploy to the `staging` environment with `helm upgrade --install`.
+3. **Promotion to production:** the same image tags that passed in `staging` are deployed to the `production` environment. The `production` environment can require an approval before the job runs.
+4. **Manual:** deploy a chosen image tag to a chosen environment (`staging` or `production`).
 
 Container registry: **open decision**, see 1.12. Default assumption: Azure Container Registry.
 
@@ -177,9 +180,9 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 - A long-living `dev` branch is deliberately **not** used: long-living branches drift away from production code.
 
 **Staging through GitHub Environments, not branches.**
-- A `staging` environment exists so the microservices can be tested together in a realistic setting before release.
-- It is implemented with GitHub Environments (for environment-scoped secrets, variables, and optional approvals), not with a separate branch.
-- Changes merged to `main` deploy to `staging` first. Promotion to the next environment is a separate, approved workflow step.
+- Two environments exist: `staging` and `production`. `staging` lets the microservices be tested together in a realistic setting before release.
+- Both are implemented with GitHub Environments (for environment-scoped secrets, variables, and optional approvals), not with separate branches.
+- Changes merged to `main` deploy to `staging` first. Promotion to `production` is a separate workflow step, see 1.11.
 
 **Feature flags are not used.**
 - Deployment and release do not need to be decoupled in this project, and flags would make the code harder to read.
@@ -189,7 +192,7 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 - Branch naming convention.
 - Pull request and review rules (required approvals, required checks, merge method).
 - Commit format. Conventional Commits is already assumed in #5.
-- Whether a production environment is created and how promotion from `staging` to it is approved.
+- Whether promotion from `staging` to `production` needs a manual approval (required reviewers) or is automatic.
 
 ---
 

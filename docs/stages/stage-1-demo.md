@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 387cdaf96ff1b0f1201be0d39f49b52484fe5222996036ac4a599c8ead883736 -->
+<!-- sha256: b4019114cacf59d159d982e2999fba5c17e04bb76d6c5af581a28a3d22d3f969 -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -9,6 +9,12 @@ Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-cal
 Verify that the Kubernetes cluster and the APIs work. The frontend and the backend run in the cloud, and the frontend page calls the APIs and shows the answers. There is **no Butterfly Give business logic**, **no database**, and **no calls from one service to another** in this stage. The database and the calls come in Stage 2.
 
 This stage also starts following the structure of a Go service that is defined in `plan.md` section 1.4, so the services already have the shape they will keep later. Only the directories needed now are created (`cmd`, `config`, `domain`, and `http`). The `store` and `client` directories are added in Stage 2, next to them, without reorganizing anything.
+
+## Who does what
+
+- **Agents** implement only the code: the four Go services (the structure from `plan.md` section 1.4, the endpoints, and the tests) and the frontend page.
+- **The team** does all the deployment itself, to learn it: the Docker images, the Helm charts, the AKS cluster, the GitHub Actions pipeline, and deploying and checking everything in the cloud.
+- An agent working on this stage does not do deployment work. It does not write or change Dockerfiles, Helm charts, pipeline files, or cluster configuration.
 
 ## Scope
 
@@ -21,8 +27,8 @@ This stage also starts following the structure of a Go service that is defined i
 - The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer.
 - Small tests of the logic and the handlers (see "Tests" below).
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
-- Docker image for each service and for the frontend.
-- Deployment to the cloud environment (AKS, with Helm and a basic GitHub Actions pipeline), so the page is reachable from the internet and shows all four services answering.
+- Done by the team: a Docker image for each service and for the frontend.
+- Done by the team: deployment to the cloud environment (AKS, with Helm and a basic GitHub Actions pipeline), so the page is reachable from the internet and shows all four services answering.
 
 ### Out of scope
 - Databases. No service connects to a database in this stage, so there is no `store`.
@@ -41,13 +47,17 @@ The tests in this stage are small and need no database, no RabbitMQ, and no netw
 
 ## Checklist
 
+Implementation (agents):
+
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
 - [ ] Each service has the structure from `plan.md` section 1.4 for what exists in this stage, with the logic and the HTTP side in separate directories
-- [ ] Tests exist for the logic and the handlers, and `go test ./...` passes with no database or RabbitMQ running
-- [ ] `go test ./...` runs in the GitHub Actions pipeline
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
+- [ ] Tests exist for the logic and the handlers, and `go test ./...` passes with no database or RabbitMQ running
 - [ ] Frontend page shows the ping result for all four services
+
+Deployment (the team):
+
 - [ ] Docker images build for all services and the frontend
 - [ ] Helm deploys the whole system into AKS
-- [ ] GitHub Actions builds the images and deploys on merge to main
+- [ ] GitHub Actions builds the images, runs `go test ./...`, and deploys on merge to main
 - [ ] The deployed page shows all four services answering from the cloud

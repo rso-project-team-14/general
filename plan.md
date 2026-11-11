@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 83cd465c6a7a9695f7a7d16f5f390a2ffdd1f6cf3bf418d9d29d19f01f68575b -->
+<!-- sha256: 44ac9fb0995177c2b805c306c249084827178055867f847ff6c6cf627bcf540f -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -72,6 +72,7 @@ general/
 ├── scripts/
 │   └── doc-hash.sh                 # recalculates and checks the content hash on line 3 of every document
 ├── plan.md                         # this file
+├── RSO_Ekipa14_Butterfly.pdf       # the original project brief (Slovenian)
 ├── docs/
 │   └── stages/                     # one document per delivery stage
 │       ├── stage-1-demo.md

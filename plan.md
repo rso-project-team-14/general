@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 64e3298a39ade1dd5f2325d3c238b9a8ae94ef082e1c52f24ef96409a7d8c5f1 -->
+<!-- sha256: 353d3be70713ac940d1a28159e6add7c4b53dfd026e7c9e28cb21d8b770f2f0d -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -75,7 +75,7 @@ general/
 ├── docs/
 │   └── stages/                     # one document per delivery stage
 │       ├── stage-1-demo.md
-│       ├── stage-2-mvp.md
+│       ├── stage-2-database-and-calls.md
 │       └── stage-3-cloud.md
 └── api/                            # planned API contracts, one document per service
     ├── company-membership.md
@@ -86,7 +86,7 @@ general/
 
 **Structure of a Go service**
 
-Every Go service has the same internal structure in its own repository. The code is split into directories by responsibility, so the logic, the HTTP side, and the database side are separate. The same structure keeps the services easy to review and to compare, and lets new endpoints be added without reorganizing anything. The services start following it in Stage 1 (`docs/stages/stage-1-demo.md`).
+Every Go service has the same internal structure in its own repository. The code is split into directories by responsibility, so the logic, the HTTP side, and the database side are separate. The same structure keeps the services easy to review and to compare, and lets new endpoints be added without reorganizing anything. The services start following it in Stage 1 (`docs/stages/stage-1-demo.md`), with the directories needed there. The `store` and `client` directories are added in Stage 2 (`docs/stages/stage-2-database-and-calls.md`).
 
 ```
 <service-repository>/
@@ -350,11 +350,11 @@ TO DO. This section is empty on purpose. The flows between the services will be 
 
 | Stage | Document | Goal |
 |---|---|---|
-| 1 | [docs/stages/stage-1-demo.md](docs/stages/stage-1-demo.md) | Basic demo: no business logic, the services only answer basic API requests and run in the cloud environment |
-| 2 | [docs/stages/stage-2-mvp.md](docs/stages/stage-2-mvp.md) | Minimum viable product (to be planned) |
+| 1 | [docs/stages/stage-1-demo.md](docs/stages/stage-1-demo.md) | Basic demo: Kubernetes, the frontend, and the backend APIs only. No business logic, no database, and no calls between services |
+| 2 | [docs/stages/stage-2-database-and-calls.md](docs/stages/stage-2-database-and-calls.md) | Connect the databases and make an API call from a service |
 | 3 | [docs/stages/stage-3-cloud.md](docs/stages/stage-3-cloud.md) | To be planned |
 
-Stages 2 and 3 are empty placeholders. They will be planned after Stage 1 is done.
+Stage 3 is an empty placeholder. It will be planned after Stage 2 is done.
 
 ### 2.4 Definition of done (applies to every stage)
 

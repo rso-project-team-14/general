@@ -1,54 +1,51 @@
 # Stage 1: Basic demo
 
-<!-- sha256: dd9053efa0211b771d308830c381b6da5e7cc2b4dbaeacffbf190092edbd06b4 -->
+<!-- sha256: 387cdaf96ff1b0f1201be0d39f49b52484fe5222996036ac4a599c8ead883736 -->
 
-Back to [plan.md](../../plan.md).
+Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
 ## Goal
 
-Verify that the whole setup works in the cloud environment. There is **no Butterfly Give business logic** in this stage. Every service only starts and answers basic API requests, and the whole thing runs in the cloud.
+Verify that the Kubernetes cluster and the APIs work. The frontend and the backend run in the cloud, and the frontend page calls the APIs and shows the answers. There is **no Butterfly Give business logic**, **no database**, and **no calls from one service to another** in this stage. The database and the calls come in Stage 2.
 
-This stage also starts following the structure of a Go service that is defined in `plan.md` section 1.4. The Go services get, already now, the shape they will keep later, with their code split into separate directories. The structure is checked with a few mock tests, so that later stages add endpoints and logic into it without reorganizing anything.
+This stage also starts following the structure of a Go service that is defined in `plan.md` section 1.4, so the services already have the shape they will keep later. Only the directories needed now are created (`cmd`, `config`, `domain`, and `http`). The `store` and `client` directories are added in Stage 2, next to them, without reorganizing anything.
 
 ## Scope
 
 ### In scope
 - Four Go services (`company-membership`, `challenge`, `participation`, `donation-impact`), each with:
   - `GET /health/started`: the service finished starting.
-  - `GET /health/ready`: can reach its own database (PostgreSQL, or MongoDB for `challenge`). RabbitMQ is not checked in this stage.
+  - `GET /health/ready`: the service can handle requests. With no database or outgoing calls yet, it succeeds once the service has started.
   - `GET /health/live`: process is alive.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
-- The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer, and the database side only opens the connection and provides the check used by `/health/ready`.
-- Mock tests that check the structure (see "Mock tests" below).
+- The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer.
+- Small tests of the logic and the handlers (see "Tests" below).
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
-- A managed PostgreSQL service with three logical databases (`company_db`, `participation_db`, `impact_db`) and a managed MongoDB service with `challenge_db`, one database per service, all empty.
 - Docker image for each service and for the frontend.
 - Deployment to the cloud environment (AKS, with Helm and a basic GitHub Actions pipeline), so the page is reachable from the internet and shows all four services answering.
 
 ### Out of scope
+- Databases. No service connects to a database in this stage, so there is no `store`.
+- Calls from a service to another service or to outside. There is no `client` in this stage.
 - RabbitMQ. It is not set up in this stage.
 - Everything else: authentication, companies, challenges, participation, donations, impact, events, business rules, database tables, seed data, OpenAPI beyond the ping and health endpoints.
 
-## Mock tests
+## Tests
 
-The tests in this stage are small and need no database, no RabbitMQ, and no network. They check that the structure works:
+The tests in this stage are small and need no database, no RabbitMQ, and no network. There is no database and no client in this stage, so there is nothing to mock. They check that the structure works:
 
 - A test of `domain` that checks the ping answer.
 - A test of each `http` handler with a standard test HTTP server, checking the status code and the shape of the JSON.
-- A test of `/health/ready` with a mock of the `store` check, once reporting the database as reachable and once as unreachable.
-
-**The database and the client are mocked.** In every test the `store` and the `client` are replaced by mocks that implement the interfaces defined by `domain`. A test never uses a real database or makes a real outgoing call. This stage has no outgoing calls yet, so only the mock database is needed now. The first mock client comes with the first outgoing call.
 
 `go test ./...` runs all of them.
 
 ## Checklist
 
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
-- [ ] Each service has the structure from `plan.md` section 1.4, with the logic, the HTTP side, and the database side in separate directories
-- [ ] Mock tests exist for the logic, the handlers, and the readiness check, with the database and the client mocked, and `go test ./...` passes with no database or RabbitMQ running
+- [ ] Each service has the structure from `plan.md` section 1.4 for what exists in this stage, with the logic and the HTTP side in separate directories
+- [ ] Tests exist for the logic and the handlers, and `go test ./...` passes with no database or RabbitMQ running
 - [ ] `go test ./...` runs in the GitHub Actions pipeline
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
-- [ ] `/health/ready` fails when the service's own database is unreachable
 - [ ] Frontend page shows the ping result for all four services
 - [ ] Docker images build for all services and the frontend
 - [ ] Helm deploys the whole system into AKS

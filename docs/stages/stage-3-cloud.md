@@ -1,7 +1,7 @@
 # Stage 3
 
-<!-- sha256: 99154b8004fec374938e92e16a9dc185ea29efd53494a00c3603da9233587fa3 -->
+<!-- sha256: 31fa61b1ca5bfc35dc8ea2060a53a64cabccbff328aedb2010d76fbf42aa6f3b -->
 
-Back to [plan.md](../../plan.md). Previous stage: [Stage 2](stage-2-mvp.md).
+Back to [plan.md](../../plan.md). Previous stage: [Stage 2](stage-2-database-and-calls.md).
 
 _To be planned._

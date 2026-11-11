@@ -76,4 +76,4 @@ The `changelog/` directory is a **historical record for people**, and for agents
 
 ## For the other repositories
 
-Each service repository and the frontend repository has its own `CLAUDE.md`. What it must contain, including the list of files from this repository that it depends on and the hash check that detects changes, is defined in `plan.md` section 1.14. That is the only copy, so update it there.
+Each service repository and the frontend repository has its own `CLAUDE.md`. What it must contain, including the list of files from this repository that it depends on and the hash check that detects changes, is defined in `plan.md` section 1.14. That is the only copy, so update it there. Nothing from `plan.md` is repeated in another repository's `CLAUDE.md`: those files link to the plan and contain only what is specific to their repository.

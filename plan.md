@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 23f081b78f879204d380d71778f303ea611ccd111d18ad5823f55f96a2ebabbc -->
+<!-- sha256: dd045651941cb5ee3c01733623cce1f2664459698a875428e83f5b3ddc529e03 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -237,11 +237,11 @@ These need an answer from the team or the course staff. Each stage document list
 
 ### 1.14 CLAUDE.md in every repository
 
-Every service repository and the frontend repository has its own `CLAUDE.md`, created when the repository is initialized (for example with `/init`, then completed from this list). Keep it short and specific to that repository. Link to this plan instead of copying its content, so the two cannot drift apart. The standard sections below are the one exception: they are copied as they are.
+Every service repository and the frontend repository has its own `CLAUDE.md`, created when the repository is initialized (for example with `/init`, then completed from this list). **Nothing that is written in this plan is repeated in a `CLAUDE.md`.** That includes a convention such as UUID v4 or the port, the stack, and any rule from 1.8 or 1.13. The `CLAUDE.md` links to the plan section instead, so the plan stays the only copy and the two cannot drift apart. A `CLAUDE.md` contains only what is specific to its repository and is not in the plan. The standard sections below are the template itself and are copied as they are.
 
 **Standard sections (the start of every `CLAUDE.md`)**
 
-These four sections are the same in every repository, except for the Stack section, which is filled in per repository. Copy them as written.
+These four sections are the same in every repository. Copy them as written.
 
 ````markdown
 ## How to work in this repo
@@ -257,8 +257,8 @@ These four sections are the same in every repository, except for the Stack secti
 
 ## Stack
 
-- Go, REST/JSON API, RabbitMQ for events, packaged as a Docker image and deployed with Helm to Kubernetes (AKS). The shared stack is described in `plan.md` section 1.2 in the `general` repository.
-- Database: <fill in: PostgreSQL or MongoDB>, owned by this service only.
+- The shared stack and the conventions are in `plan.md` (sections 1.2 and 1.6) in the `general` repository. Do not repeat them here.
+- Add here only what the plan does not say: the Go version, the libraries chosen in this repository, and the build tooling.
 - Prefer the repo's existing libraries over reaching for a new dependency.
 - Don't infer the build tooling or the module layout. Read the repo.
 
@@ -273,29 +273,22 @@ These four sections are the same in every repository, except for the Stack secti
 - When you get corrected, add the lesson to this file (update CLAUDE.md) so the next session starts ahead.
 ````
 
-In the frontend repository, replace the Stack section with: React and TypeScript web UI served by nginx, calling the services through the gateway under `/api/`. The package manager is not decided, so the agent must not infer one and must read the repo.
-
-After the standard sections, add the project-specific items below.
+After the standard sections, add the repository-specific items below. They are links and specifics, never copies of the plan.
 
 A service's `CLAUDE.md` should contain:
 
-1. **Purpose and place.** The repository name, which service it is (short name from 1.3), a short paragraph on its responsibility with a link to its part of section 2.1, and what it explicitly does not do.
-2. **Link to `general`.** The repository `rso-project-team-14/general` is where the plan lives. `plan.md` is the source of truth for infrastructure, responsibilities, and stages, and the planned API contracts are in `api/`.
+1. **Purpose and place.** Which service this repository is (the short name from 1.3) and a link to its part of section 2.1. Do not copy the description of its responsibility.
+2. **Link to `general`.** The repository `rso-project-team-14/general`, where the plan lives, with a pointer to `plan.md` as the source of truth. Nothing more. In particular, no summary of the plan, and no restating of the git workflow, which is in 1.13.
 3. **Dependencies on `general` (required).** A table of the files in `general` that this repository depends on, each with a link and the hash recorded when the file was last read in full. The files are `plan.md`, the API contracts it depends on (its own and those of the services it talks to), and the stage document it is implementing. The suggested text below defines how the hashes are checked.
-4. **Contracts.** Which contract documents in `general/api/` apply: the service's own and those of the services it talks to. Until the service is implemented, the planned contract is the guide. After that, the service's own OpenAPI spec and code are the truth, and any difference from the planned contract is reported through a change in `general`.
-5. **Conventions.** The language version, the internal layout of the repository, and a pointer to the runtime conventions in 1.6 (port, health endpoints, configuration variables, JSON logging, `X-Request-ID`, error format, UUID v4, UTC timestamps). List only the deviations or additions specific to this service.
-6. **Data.** Which database it owns and where its migrations live. It never reads or writes another service's database. Money is stored in cents. If the service keeps a read-only copy of another service's data (`participation` and the challenges), the rules from 1.8 for it.
-7. **Events.** Which events the service produces and consumes (see 1.7, which is provisional), and the outbox and idempotency requirements that apply to it.
-8. **Commands.** How to build, test, lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
-9. **Git and pull requests.** GitHub Flow as in 1.13: short-lived branches from `main`, named as defined there, merged through pull requests. Commit format is pending in issue #5.
-10. **Rules for Claude.**
+4. **Repository specifics.** Only what is specific to this repository and is not in the plan: the language version, the internal layout of the repository, where the migrations live, deviations from the conventions in 1.6, and implementation choices for the events and data rules in 1.7 and 1.8. Never restate a convention or rule from the plan (for example UUID v4, the port, the health endpoints, money in cents, the database-per-service rule). If this repository has to differ from the plan, say so here as a deviation, and report it as a change in `general`.
+5. **Commands.** How to build, test, lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
+6. **Rules for Claude.** Only rules about behavior that are not in the plan:
     - Stay within this service's responsibility.
     - Do not resolve an open decision from 1.12 silently. Raise it as an issue or a change in `general`.
-    - Do not change another service's code or database.
     - If the plan looks wrong or contradicts the code, say so instead of quietly diverging from it.
     - Never commit secrets.
 
-The frontend's `CLAUDE.md` uses items 1 to 4, 8, 9, and 10. Instead of 5 to 7 it describes the frontend stack, which services' endpoints it calls through the gateway under `/api/`, and where the contracts for those calls are.
+The frontend's `CLAUDE.md` uses the same items. Its repository specifics (item 4) are things like the package manager once it is decided, and the contracts of the services it calls are rows in the dependency table (item 3).
 
 Suggested text for the dependencies (item 3):
 

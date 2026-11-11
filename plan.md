@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 72660ff5778597eb5d02f10f3272b1a51a48cc18663c86205dce9ca7a76a8828 -->
+<!-- sha256: 2d326075134366febd043cbf3771f5e23f9bab58c6761e09d7c2f33fe5382415 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -317,16 +317,9 @@ Suggested text for the dependencies (item 3):
 
 TO DO. This section is empty on purpose. The internal logic of each service will be planned together with the user stories and the description of how the application should work. Nothing here is decided yet.
 
-### 2.2 Cross-service flow (the complex use case from the brief)
+### 2.2 Cross-service flow
 
-0. Beforehand, when a representative created the challenge, `challenge` stored it and emitted `ChallengePublished`. `participation` consumed the event and updated its read-only copy. (After a reboot, `participation` rebuilds the copy from the `challenge` snapshot endpoint.)
-1. The user completes a group challenge in the frontend. The questions came from `challenge`, and the answers are submitted to `participation`.
-2. `participation` validates the submission against its copy of the challenge. If it is valid and the user has not already completed the challenge, `participation` records the completion, writes a `ChallengeCompleted` event to its outbox, and publishes it.
-3. `challenge` consumes the event, updates group progress, checks the challenge's donation rule and the remaining budget, and emits `DonationAuthorized` if the conditions are met.
-4. `donation-impact` consumes `DonationAuthorized` idempotently, creates the ledger entry, and updates the impact view.
-5. The frontend fetches updated progress and impact from the REST APIs.
-
-Note on the transactional outbox: each service that publishes events writes them into an `outbox` table (an `outbox` collection in `challenge_db`) in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. It is not part of Stage 1.
+TO DO. This section is empty on purpose. The flows between the services will be planned together with the user stories and the description of how the application should work. Nothing here is decided yet.
 
 ### 2.3 Delivery stages
 

@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: d411963f00c85baec3577228da3baf1a3cadbf7fcb655ac361b20dc0739b1477 -->
+<!-- sha256: f7895a894d6e2ac2f17dc1b06b32d3b7e4e2944b55bd681726f7f1a36fb10422 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -386,7 +386,7 @@ Stage 3 is an empty placeholder. It will be planned after Stage 2 is done.
 ### 2.4 Definition of done (applies to every stage)
 
 - Code merged to the main branch through a reviewed pull request.
-- Tests, as far as the stage includes them, run through `make test`. Stage 1 has tests of the logic and the handlers only, because it has no database and no calls. From Stage 2, which connects a real database and makes a real call, the tests use them for real, with no mocks.
-- Where the service has an OpenAPI spec (in its own repository), the spec matches the implementation, and any difference from a planned contract in `general` is logged in `changelog/`.
+- Unit tests for domain rules, integration tests for each service's REST API and DB layer.
+- The service's OpenAPI spec (in its own repository) matches the implementation, and any difference from the planned contract in `general` is logged in `changelog/`.
 - The stage document's checklist is fully ticked, or open items are moved to the next stage with a note.
 - `plan.md` is updated if an infrastructure decision changed. Documents in `general` carry a content hash on line 3, recalculated with `scripts/doc-hash.sh` (see `CLAUDE.md`).

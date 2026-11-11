@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 43573da238514b1a7e0c99995c8358e7b28fcde022487243fc27ff641e1001d1 -->
+<!-- sha256: e01941afcf3577937dfe52e0c9ce5d798171555f0e8ed2d4841d7cdaca55aab5 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -212,7 +212,7 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 - All work happens on short-lived branches created from `main` and merged back through a pull request.
 - A long-living `dev` branch is deliberately **not** used: long-living branches drift away from production code.
 
-**Branch naming convention** (defined in a comment on issue [#5](https://github.com/rso-project-team-14/general/issues/5)):
+**Branch naming convention:**
 
 ```
 <initials>/<type>-<descriptive-name>

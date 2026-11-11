@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: ad446ce9f493f18eea7ce68fafe7eff5d475bda6e372f6894aedad10b46ab0f4 -->
+<!-- sha256: 818ef5515d8b99d74c546ca9ac31726821425a2c9206017f8261365255950750 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -99,11 +99,11 @@ Every Go service has the same internal structure in its own repository. The code
 ```
 
 - `cmd/<service>/main.go` reads the configuration, builds the parts, and starts the HTTP server. It contains no logic.
-- `internal/domain` is the logic. It knows nothing about HTTP or the database.
+- `internal/domain` is the logic. It knows nothing about HTTP. It reaches the database through an interface that it defines itself, which lists what the logic needs from storage (for example "save this", "load that", "is the database reachable").
 - `internal/http` is the HTTP side: the router, the handlers, the middleware, and the endpoints. A handler only translates between HTTP and the logic. It holds no rules.
-- `internal/store` is the database side. It is used through an interface, so a test can replace it with a mock.
+- `internal/store` is the database side. It implements the interface that `domain` defines. Because the logic only sees the interface, a test can replace the store with a mock.
 - `internal/config` reads the configuration variables from 1.6 and hands them to the other parts.
-- Dependencies point one way: `http` uses `domain`, and `domain` uses neither `http` nor `store`.
+- Dependencies point one way: `http` calls `domain`, and `domain` calls the store through its interface. `store` and `domain` know nothing about `http`, and `domain` does not import the `store` package. `main.go` connects the parts: it creates the store and passes it to the logic, and passes the logic to the HTTP side. A handler never uses the store directly, so even the readiness check goes through the logic.
 - Directories for later needs (for example RabbitMQ messaging and database migrations) are added next to the ones above when they are needed.
 - Adding an endpoint means adding the logic to `domain` and a handler and a route to `http`. `main.go` and the other directories stay as they are. The frontend is not a Go project and has its own layout.
 

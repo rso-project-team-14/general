@@ -66,7 +66,7 @@ Layout of `general`:
 ```
 general/
 ├── CLAUDE.md                       # rules for working in this repo
-├── CHANGELOG.md                    # log of changes, read by the other repos
+├── changelog/                      # one file per change, read by the other repos
 ├── plan.md                         # this file
 ├── docs/
 │   └── stages/                     # one document per delivery stage
@@ -289,6 +289,6 @@ Stages 2 and 3 are empty placeholders. They will be planned after Stage 1 is don
 
 - Code merged to the main branch through a reviewed pull request.
 - Unit tests for domain rules, integration tests for each service's REST API and DB layer.
-- The service's OpenAPI spec (in its own repository) matches the implementation, and any difference from the planned contract in `general` is logged in `CHANGELOG.md`.
+- The service's OpenAPI spec (in its own repository) matches the implementation, and any difference from the planned contract in `general` is logged in `changelog/`.
 - The stage document's checklist is fully ticked, or open items are moved to the next stage with a note.
 - `plan.md` is updated if an infrastructure decision changed.

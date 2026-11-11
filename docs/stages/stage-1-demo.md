@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 38c3a42332e8b2ea39d7248eb39074b30d3a12b42dcc8143f78f01cee8e37ac3 -->
+<!-- sha256: 9b30b3173bc22341db3918c8bf9aee424b6c2d6b637544098b7020b979dcdf43 -->
 
 Back to [plan.md](../../plan.md).
 
@@ -27,7 +27,7 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 
 ## Checklist
 
-- [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4 (the location of the deployment files is open, see `plan.md` 1.12 item 12)
+- [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4 (the location of the deployment files is open, see `plan.md` 1.12 item 13)
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
 - [ ] `/health/ready` fails when the service's own database or RabbitMQ is unreachable
 - [ ] Frontend page shows the ping result for all four services

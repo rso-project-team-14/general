@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 1c621c218985788645bfa75f8f07493f427d000721f229857fd1edaa9b9a988a -->
+<!-- sha256: 338d9ec6e39ecd6d021b934e99294cc305c33e84044c20f6c68bcd64cd552e18 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -57,7 +57,7 @@ There is no monorepo. Every microservice has its own repository, the frontend ha
 | `impact-service` | `donation-impact` service |
 | `frontend` | React + TypeScript frontend (repository to be created) |
 
-Where the deployment files (Helm charts, local docker-compose stack) live is an open decision, see 1.12 item 12.
+Where the deployment files (Helm charts, local docker-compose stack) live is an open decision, see 1.12 item 13.
 
 **Source of truth for API contracts**
 - Before implementation, the planned contract lives in `general` (`api/`). It is a contract document, not an OpenAPI spec.
@@ -138,7 +138,7 @@ Event catalog (from the project brief):
 | `ChallengeCompleted` | participation | challenge | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt` |
 | `DonationAuthorized` | challenge | donation-impact | `donationId`, `challengeId`, `companyId`, `organizationId`, `amount`, `currency`, `sourceChallengeIds` |
 
-`ChallengePublished` is emitted when `challenge` receives a new challenge. The payload carries exactly the data `participation` needs at that `version`, as fixed by the contract, not the whole challenge. Which other changes emit events (edit, close, withdraw) is an open decision, see 1.12 item 13.
+`ChallengePublished` is emitted when `challenge` receives a new challenge. The payload carries exactly the data `participation` needs at that `version`, as fixed by the contract, not the whole challenge. Which other changes emit events (edit, close, withdraw) is an open decision, see 1.12 item 12.
 
 `ChallengeCompleted` is only published after the submission passed validation in `participation`, so the payload carries no validity flag. Whether payloads carry `userId` is an open decision, see 1.12 item 9.
 
@@ -200,9 +200,8 @@ These need an answer from the team or the course staff. Each stage document list
 9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
 10. **Stale copy in `participation`:** the copy of the challenges is eventually consistent. How long a gap is acceptable between a challenge being created or closed in `challenge` and `participation` knowing about it? Is a periodic re-sync from the snapshot endpoint needed as a safety net, or is the bootstrap at startup enough?
 11. **Shape of the contract and new challenge types:** the `ChallengePublished` contract is fixed, and `participation` stores it in normal columns. Challenges can still differ in content (survey questions now, other types later). How are the questions and validation rules expressed as fixed fields? And how is a new challenge type added later, for example as a new contract version that `participation` handles next to the old one? Survey is the only type for now.
-12. **Should `participation` stay a separate service?** It now owns validation and a copy of the challenges, so it is no longer thin. The earlier concern is mostly gone. Revisit only if keeping the copy in sync proves painful.
-13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Startup [`participation` not started until the bootstrap is complete].
-12. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
+12. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Startup [`participation` not started until the bootstrap is complete].
+13. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
 
 ### 1.13 Git workflow and environments
 
@@ -348,6 +347,8 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 **Responsibility split between Challenge and Participation (decided)**
 
 `challenge` knows what is asked and what it is worth, plus the collective result. `participation` knows what one user did and whether it counts. Anything that needs other users' data (group progress, remaining budget, donation decision) belongs to `challenge`. Anything about a single user's submission (the attempt, validation, repeat-prevention, history) belongs to `participation`.
+
+`participation` stays a separate service. Per-user attempts and group-wide counters are different consistency problems, and `participation` now owns validation and a copy of the challenges, so it is not a thin service.
 
 Validation lives in `participation`, against a read-only copy of the challenges that it builds from events. `challenge` does not validate and is not called when a user completes a challenge. This means:
 - `participation` does not depend on `challenge` at runtime, except for the bootstrap at startup. If `challenge` is down, users can still complete the challenges `participation` already knows.

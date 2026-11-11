@@ -1,6 +1,6 @@
 # Stage 2: Database and API call
 
-<!-- sha256: cf8a0769c597e7635810c5d2c3a75bf84a3f5a642de17c4d02391186ab52878f -->
+<!-- sha256: 584c656f928c6d89f60e74d7fa773f569877b1e0226976f99c99fc5e2327e60c -->
 
 Back to [plan.md](../../plan.md). Previous stage: [Stage 1](stage-1-demo.md). Next stage: [Stage 3](stage-3-cloud.md).
 
@@ -19,6 +19,7 @@ Add what Stage 1 left out: connect the databases, and make an API call from a se
 
 ### Out of scope
 - RabbitMQ and events.
+- API specs. As in Stage 1, nothing is written to the `api/` directory of `general` in this stage, and no OpenAPI spec is written. The specs are written when the business logic is implemented.
 - Business logic, authentication, and everything else not named above.
 
 ## Tests

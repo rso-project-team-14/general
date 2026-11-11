@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: d190f1cfb04404974203c606358dd4065816616c3bdda1fe1193a70ea2ea0c30 -->
+<!-- sha256: b1238514c982d8229b35611e49a1f61ca94afe0464195097da046e5110db6cb0 -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -35,7 +35,8 @@ This stage also starts following the structure of a Go service that is defined i
 - Databases. No service connects to a database in this stage, so there is no `store`.
 - Calls from a service to another service or to outside. There is no `client` in this stage.
 - RabbitMQ. It is not set up in this stage.
-- Everything else: authentication, companies, challenges, participation, donations, impact, events, business rules, database tables, seed data, OpenAPI beyond the ping and health endpoints.
+- API specs. Nothing is written to the `api/` directory of `general` in this stage, and no OpenAPI spec is written. The health and ping endpoints are simple and need no spec. The specs are written later, when the business logic is implemented.
+- Everything else: authentication, companies, challenges, participation, donations, impact, events, business rules, database tables, seed data.
 
 ## Tests
 

@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: e01941afcf3577937dfe52e0c9ce5d798171555f0e8ed2d4841d7cdaca55aab5 -->
+<!-- sha256: e8195e4d51467fba4a4154e8a714b871b286cba709629bcbee4559d515b87af5 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -130,7 +130,7 @@ Event envelope (JSON, every event):
 }
 ```
 
-Event catalog (from the project brief):
+Event catalog:
 
 | Event | Producer | Consumers | Payload (summary) |
 |---|---|---|---|
@@ -204,8 +204,6 @@ These need an answer from the team or the course staff. Each stage document list
 13. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
 
 ### 1.13 Git workflow and environments
-
-Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (branching strategy research), part of the broader git-practices issue [#5](https://github.com/rso-project-team-14/general/issues/5).
 
 **Branching model: GitHub Flow.**
 - `main` is the only long-lived branch and is always deployable.

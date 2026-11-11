@@ -42,6 +42,7 @@ Issues in the other repositories are named with the repository name as a prefix,
 6. **Stage documents are separate files** in `docs/stages/` and are linked from `plan.md` section 2.3. Do not put stage detail into `plan.md`.
 7. **Language:** documents are written in English. The original project brief (`RSO_Ekipa14_Butterfly.pdf`) is in Slovenian.
 8. **Run `scripts/doc-hash.sh` after changing any document and before committing.** Never edit or calculate a hash by hand (see "Document hashes").
+9. **Documents state the current decision, not where it came from.** Do not cite sources (an issue, a comment, the project brief) in `plan.md`, `docs/`, or `api/`. Write the source in the changelog entry for that change. A pointer that says where an open item is being discussed (for example "still to be agreed in issue #5") is fine, because it is not a source.
 
 ## Document hashes
 
@@ -69,7 +70,7 @@ The `changelog/` directory is how the other repositories find out that something
 
 - **One file per entry.** Never edit another entry to add a new one.
 - **File name:** `YYYY-MM-DD_HH-MM-SS_short-title.md`. The timestamp is in UTC with second precision and comes first, so a plain alphabetical listing is chronological. The short title is lowercase words joined by hyphens that describe the content, for example `2026-11-09_20-42-57_challenge-uses-mongodb.md`.
-- **File content:** the title as a heading, a `Date:` line with the same timestamp, then a description of what changed and which files or sections are affected.
+- **File content:** the title as a heading, a `Date:` line with the same timestamp, then a description of what changed and which files or sections are affected. If the change comes from a source (an issue or comment link, the project brief, a decision made in conversation), name it here.
 - One entry per logical change. Do not rewrite old entries, except for typos.
 - Add the entry in the same commit as the change.
 

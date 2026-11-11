@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 6e792044d6406e3928a39ee3ec3c61f59b0976daf1abc8ebc731650d8a5b3dac -->
+<!-- sha256: 1c621c218985788645bfa75f8f07493f427d000721f229857fd1edaa9b9a988a -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -170,7 +170,8 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - Startup, readiness, and liveness probes use `/health/started`, `/health/ready`, and `/health/live`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
 - **Gateway API with Envoy, not an Ingress.** The nginx Ingress controller is not used, because it is no longer supported. The cluster entry point is a Kubernetes Gateway API `Gateway`, with Envoy as the implementation behind it. `HTTPRoute` resources route `/` to the frontend and `/api/` to the services, with path-based routing to each service. The frontend container still serves its static files with its own nginx, which is unrelated to the Ingress controller.
-- PostgreSQL, MongoDB, and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or managed services.
+- **PostgreSQL and MongoDB are managed services**, not run inside the cluster. The Helm charts therefore deploy no database. Each service gets its connection string and credentials from a Kubernetes Secret. Which managed products are used is still to be chosen.
+- **RabbitMQ hosting is an open decision**, see 1.12 item 2.
 
 ### 1.11 CI/CD
 
@@ -189,7 +190,7 @@ Container registry: **open decision**, see 1.12. Default assumption: Azure Conta
 These need an answer from the team or the course staff. Each stage document lists the decisions it depends on.
 
 1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Not needed for Stage 1.
-2. **Data services in AKS:** in-cluster PostgreSQL, MongoDB, and RabbitMQ through Helm, or Azure Database for PostgreSQL, a managed MongoDB-compatible service (for example Azure Cosmos DB for MongoDB), and a RabbitMQ container. Needed for Stage 1.
+2. **RabbitMQ hosting:** run it inside the cluster (installed with Helm or an operator), or use a managed RabbitMQ service from a third party. This is still to be decided. PostgreSQL and MongoDB are already decided as managed services (see 1.10), but which managed products to use is also still to be chosen. Needed for Stage 1.
 3. **Infrastructure as code:** plain Azure CLI scripts, or Terraform / Bicep for the AKS cluster. Needed for Stage 1.
 4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.

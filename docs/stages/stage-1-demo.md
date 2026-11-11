@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 2dbe72e0df8e5d1fd4f1a5d690362ec1c763854dbbe30331275b38847a4336ee -->
+<!-- sha256: 38c3a42332e8b2ea39d7248eb39074b30d3a12b42dcc8143f78f01cee8e37ac3 -->
 
 Back to [plan.md](../../plan.md).
 
@@ -17,8 +17,8 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
   - `GET /health/live`: process is alive.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
-- One PostgreSQL instance with three logical databases (`company_db`, `participation_db`, `impact_db`) and one MongoDB instance with `challenge_db`, one database per service, all empty.
-- One RabbitMQ instance.
+- A managed PostgreSQL service with three logical databases (`company_db`, `participation_db`, `impact_db`) and a managed MongoDB service with `challenge_db`, one database per service, all empty.
+- One RabbitMQ instance (hosting still to be decided).
 - Docker image for each service and for the frontend.
 - Deployment to the cloud environment (AKS, with Helm and a basic GitHub Actions pipeline), so the page is reachable from the internet and shows all four services answering.
 
@@ -38,5 +38,5 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 
 ## Open decisions this stage depends on
 
-- Plan 1.12 item 2 (data services in AKS: in-cluster or Azure managed).
+- Plan 1.12 item 2 (RabbitMQ hosting, and which managed products are used for PostgreSQL and MongoDB).
 - Plan 1.12 item 3 (infrastructure as code or Azure CLI scripts).

@@ -10,7 +10,7 @@ This is the `general` repository of the Butterfly Give project (team 14).
 - `plan.md`: the project plan. Shared infrastructure first, service internals and delivery stages at the end.
 - `docs/stages/`: one document per delivery stage, linked from `plan.md`.
 - `api/`: the planned API contracts between the microservices (endpoints, request and response shapes, event payloads), written before implementation. These are contract documents, not OpenAPI specs.
-- `changelog/`: the log of every change to the files above, one file per entry (see below).
+- `changelog/`: a historical record of every change to the files above, one file per entry, for people (see below).
 - `scripts/`: small tools for maintaining the documents, such as `scripts/doc-hash.sh` (see "Document hashes").
 - Overall project management: GitHub issues that concern the whole project (agreements, practices, estimates, design).
 
@@ -46,7 +46,7 @@ Issues in the other repositories are named with the repository name as a prefix,
 
 ## Document hashes
 
-Every Markdown document in this repository carries a content hash on line 3, so that people and agents can tell whether a document changed without reading it. Exceptions: this file (`CLAUDE.md`), which is never read by other repositories, the files in `changelog/`, which are written once and not changed, and the PDF.
+Every Markdown document in this repository carries a content hash on line 3, so that people and agents can tell whether a document changed without reading it. **This is how the other repositories detect changes.** Each of them lists the files here that it depends on (`plan.md`, its API contract, its stage document), reads only line 3 of each, and re-reads a file only if the hash differs from the one it recorded (see `plan.md` section 1.14). Exceptions: this file (`CLAUDE.md`), which is never read by other repositories, the files in `changelog/`, which are written once and not changed, and the PDF.
 
 Layout of a document:
 
@@ -66,7 +66,7 @@ line 4+   content
 
 ## Changelog
 
-The `changelog/` directory is how the other repositories find out that something changed here. It is a directory, not one file, so that parallel changes do not cause merge conflicts. Rules:
+The `changelog/` directory is a **historical record for people**, and for agents that need to understand why a change was made. The other repositories do **not** read it to find out whether something changed. They check the hash on line 3 of the files they depend on (see "Document hashes"). It is a directory, not one file, so that parallel changes do not cause merge conflicts. Rules:
 
 - **One file per entry.** Never edit another entry to add a new one.
 - **File name:** `YYYY-MM-DD_HH-MM-SS_short-title.md`. The timestamp is in UTC with second precision and comes first, so a plain alphabetical listing is chronological. The short title is lowercase words joined by hyphens that describe the content, for example `2026-11-09_20-42-57_challenge-uses-mongodb.md`.
@@ -76,4 +76,4 @@ The `changelog/` directory is how the other repositories find out that something
 
 ## For the other repositories
 
-Each service repository and the frontend repository has its own `CLAUDE.md`. What it must contain, including the suggested text that makes Claude keep in sync with this repository's changelog, is defined in `plan.md` section 1.14. That is the only copy, so update it there.
+Each service repository and the frontend repository has its own `CLAUDE.md`. What it must contain, including the list of files from this repository that it depends on and the hash check that detects changes, is defined in `plan.md` section 1.14. That is the only copy, so update it there.

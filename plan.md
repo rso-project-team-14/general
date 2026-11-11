@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: e8195e4d51467fba4a4154e8a714b871b286cba709629bcbee4559d515b87af5 -->
+<!-- sha256: 23f081b78f879204d380d71778f303ea611ccd111d18ad5823f55f96a2ebabbc -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -68,7 +68,7 @@ Layout of `general`:
 ```
 general/
 ├── CLAUDE.md                       # rules for working in this repo
-├── changelog/                      # one file per change, read by the other repos
+├── changelog/                      # one file per change, a historical record for people
 ├── scripts/
 │   └── doc-hash.sh                 # recalculates and checks the content hash on line 3 of every document
 ├── plan.md                         # this file
@@ -281,7 +281,7 @@ A service's `CLAUDE.md` should contain:
 
 1. **Purpose and place.** The repository name, which service it is (short name from 1.3), a short paragraph on its responsibility with a link to its part of section 2.1, and what it explicitly does not do.
 2. **Link to `general`.** The repository `rso-project-team-14/general` is where the plan lives. `plan.md` is the source of truth for infrastructure, responsibilities, and stages, and the planned API contracts are in `api/`.
-3. **Sync with `general` (required).** The changelog rule below, together with the "Last checked general changelog entry" line.
+3. **Dependencies on `general` (required).** A table of the files in `general` that this repository depends on, each with a link and the hash recorded when the file was last read in full. The files are `plan.md`, the API contracts it depends on (its own and those of the services it talks to), and the stage document it is implementing. The suggested text below defines how the hashes are checked.
 4. **Contracts.** Which contract documents in `general/api/` apply: the service's own and those of the services it talks to. Until the service is implemented, the planned contract is the guide. After that, the service's own OpenAPI spec and code are the truth, and any difference from the planned contract is reported through a change in `general`.
 5. **Conventions.** The language version, the internal layout of the repository, and a pointer to the runtime conventions in 1.6 (port, health endpoints, configuration variables, JSON logging, `X-Request-ID`, error format, UUID v4, UTC timestamps). List only the deviations or additions specific to this service.
 6. **Data.** Which database it owns and where its migrations live. It never reads or writes another service's database. Money is stored in cents. If the service keeps a read-only copy of another service's data (`participation` and the challenges), the rules from 1.8 for it.
@@ -297,14 +297,24 @@ A service's `CLAUDE.md` should contain:
 
 The frontend's `CLAUDE.md` uses items 1 to 4, 8, 9, and 10. Instead of 5 to 7 it describes the frontend stack, which services' endpoints it calls through the gateway under `/api/`, and where the contracts for those calls are.
 
-Suggested text for the sync rule (item 3):
+Suggested text for the dependencies (item 3):
 
-> Before implementing a feature, list the `changelog/` directory in the `general` repository (`rso-project-team-14/general`) and compare the newest file name with the one recorded below under "Last checked general changelog entry".
-> - If there are files newer than that one (file names start with a UTC timestamp, so alphabetical order is chronological), read them, then re-read the parts of `plan.md`, `docs/`, and `api/` they affect. Apply any changes that concern this repository, then update the "Last checked" line to the newest file name.
-> - If there are no newer files, do not re-read `plan.md`.
-> - Every document in `general` has its content hash on line 3 (`<!-- sha256: ... -->`, covering line 4 to the end). To check whether a specific document changed since you last read it, compare that line with the hash you recorded before reading the whole file.
+> ## Documents from `general` this repository depends on
 >
-> Last checked general changelog entry: _none yet_
+> These files in the `general` repository (`rso-project-team-14/general`, branch `main`) describe what this repository implements. Each one has a content hash on line 3. "Last read hash" is the hash from the last time the file was read in full.
+>
+> | File | Link | Last read hash |
+> |---|---|---|
+> | `plan.md` | `https://github.com/rso-project-team-14/general/blob/main/plan.md` | _none yet_ |
+> | `api/<this-service>.md` | `https://github.com/rso-project-team-14/general/blob/main/api/<this-service>.md` | _none yet_ |
+> | `docs/stages/<current-stage>.md` | `https://github.com/rso-project-team-14/general/blob/main/docs/stages/<current-stage>.md` | _none yet_ |
+>
+> Before implementing a feature, check each file in the table:
+> 1. Read only line 3 of the file. For example: `curl -s https://raw.githubusercontent.com/rso-project-team-14/general/main/plan.md | sed -n 3p`. It looks like `<!-- sha256: ... -->`.
+> 2. If the hash is the same as "Last read hash", the file did not change. Do not re-read it.
+> 3. If it is different, or the recorded hash is `none yet`, read the whole file and apply the changes that concern this repository. Then write the new hash into the table.
+>
+> The `changelog/` directory in `general` is a historical record for people. Do not use it to detect changes. Read an entry only when you need to understand why something was changed.
 
 ---
 

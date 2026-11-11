@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: d29047ef2a2e6878d0d9be2bc3ba14ec9639f2433cd2ec933fe5d334e88cab88 -->
+<!-- sha256: 7f8357f39ba077f7117de2cccf963dddfcf66d26c8c934e84b0a963a9735bb55 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -229,7 +229,45 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 
 ### 1.14 CLAUDE.md in every repository
 
-Every service repository and the frontend repository has its own `CLAUDE.md`, created when the repository is initialized (for example with `/init`, then completed from this list). Keep it short and specific to that repository. Link to this plan instead of copying it, so the two cannot drift apart.
+Every service repository and the frontend repository has its own `CLAUDE.md`, created when the repository is initialized (for example with `/init`, then completed from this list). Keep it short and specific to that repository. Link to this plan instead of copying its content, so the two cannot drift apart. The standard sections below are the one exception: they are copied as they are.
+
+**Standard sections (the start of every `CLAUDE.md`)**
+
+These four sections are the same in every repository, except for the Stack section, which is filled in per repository. Copy them as written.
+
+````markdown
+## How to work in this repo
+
+- Plan before editing: outline the approach and surface tradeoffs first. Do not hide confusion behind a confident edit.
+- Simplicity first: smallest change that works, no premature abstraction (YAGNI).
+- Surgical changes only: touch only what the task names; don't refactor unrelated code.
+- State the goal and the definition of done up front; loop until verified against it.
+- Ask when the spec is ambiguous; do not guess and ship the guess as fact.
+- Stay in scope: no drive-by edits to neighboring code just because you're in the file.
+- Tests are truth: run tests and they must pass before you claim done.
+- Be concise: short answers, no recap of work you just did unless asked.
+
+## Stack
+
+- Go, REST/JSON API, RabbitMQ for events, packaged as a Docker image and deployed with Helm to Kubernetes (AKS). The shared stack is described in `plan.md` section 1.2 in the `general` repository.
+- Database: <fill in: PostgreSQL or MongoDB>, owned by this service only.
+- Prefer the repo's existing libraries over reaching for a new dependency.
+- Don't infer the build tooling or the module layout. Read the repo.
+
+## What burned us before
+
+<!-- Guide for the agent: nothing is recorded yet. Do not add anything here on your own and do not invent incidents.
+     When the user tells you to add an entry, write one short line: what went wrong, and the check that would have caught it.
+     Example of the shape (not a real incident): "A job reported success while some records were skipped. Verify counts after bulk operations." -->
+
+## Keep this file honest
+
+- When you get corrected, add the lesson to this file (update CLAUDE.md) so the next session starts ahead.
+````
+
+In the frontend repository, replace the Stack section with: React and TypeScript web UI served by nginx, calling the services through the ingress under `/api/`. The package manager is not decided, so the agent must not infer one and must read the repo.
+
+After the standard sections, add the project-specific items below.
 
 A service's `CLAUDE.md` should contain:
 
@@ -237,7 +275,7 @@ A service's `CLAUDE.md` should contain:
 2. **Link to `general`.** The repository `rso-project-team-14/general` is where the plan lives. `plan.md` is the source of truth for infrastructure, responsibilities, and stages, and the planned API contracts are in `api/`.
 3. **Sync with `general` (required).** The changelog rule below, together with the "Last checked general changelog entry" line.
 4. **Contracts.** Which contract documents in `general/api/` apply: the service's own and those of the services it talks to. Until the service is implemented, the planned contract is the guide. After that, the service's own OpenAPI spec and code are the truth, and any difference from the planned contract is reported through a change in `general`.
-5. **Stack and conventions.** Language and version, the internal layout of the repository, and a pointer to the runtime conventions in 1.6 (port, health endpoints, configuration variables, JSON logging, `X-Request-ID`, error format, UUID v4, UTC timestamps). List only the deviations or additions specific to this service.
+5. **Conventions.** The language version, the internal layout of the repository, and a pointer to the runtime conventions in 1.6 (port, health endpoints, configuration variables, JSON logging, `X-Request-ID`, error format, UUID v4, UTC timestamps). List only the deviations or additions specific to this service.
 6. **Data.** Which database it owns and where its migrations live. It never reads or writes another service's database. Money is stored in cents. If the service keeps a read-only copy of another service's data (`participation` and the challenges), the rules from 1.8 for it.
 7. **Events.** Which events the service produces and consumes (see 1.7, which is provisional), and the outbox and idempotency requirements that apply to it.
 8. **Commands.** How to build, test, lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.

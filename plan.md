@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 7f8357f39ba077f7117de2cccf963dddfcf66d26c8c934e84b0a963a9735bb55 -->
+<!-- sha256: 6e792044d6406e3928a39ee3ec3c61f59b0976daf1abc8ebc731650d8a5b3dac -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -38,7 +38,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 The frontend is a separate deployable in its own repository. It has no database.
 
 Communication rules:
-- Synchronous calls: REST over HTTPS, JSON, through the frontend's nginx reverse proxy or the Kubernetes ingress.
+- Synchronous calls: REST over HTTPS, JSON, through the gateway (Kubernetes Gateway API with Envoy, see 1.10).
 - Asynchronous calls: RabbitMQ events, see section 1.7.
 - A service never reads or writes another service's database.
 - A service that needs data from another service calls its REST API or subscribes to events.
@@ -160,7 +160,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - Aggregated company views must never expose individual employee names or IDs. The Donation & Impact service enforces this in its read API. Company views contain counts and sums only.
 - Invite codes are random, single-company, expire, and have a use limit.
 - Secrets (database passwords, RabbitMQ credentials) live in Kubernetes Secrets, not in Helm values or the repo.
-- The frontend and backend only talk over HTTPS in AKS. TLS terminates at the ingress.
+- The frontend and backend only talk over HTTPS in AKS. TLS terminates at the gateway.
 
 ### 1.10 Kubernetes and Helm layout
 
@@ -169,7 +169,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - Resources per container: small requests and limits, enough to fit a student-sized AKS node pool.
 - Startup, readiness, and liveness probes use `/health/started`, `/health/ready`, and `/health/live`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
-- An Ingress routes `/` to the frontend and `/api/` to the services, with path-based routing to each service.
+- **Gateway API with Envoy, not an Ingress.** The nginx Ingress controller is not used, because it is no longer supported. The cluster entry point is a Kubernetes Gateway API `Gateway`, with Envoy as the implementation behind it. `HTTPRoute` resources route `/` to the frontend and `/api/` to the services, with path-based routing to each service. The frontend container still serves its static files with its own nginx, which is unrelated to the Ingress controller.
 - PostgreSQL, MongoDB, and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or managed services.
 
 ### 1.11 CI/CD
@@ -265,7 +265,7 @@ These four sections are the same in every repository, except for the Stack secti
 - When you get corrected, add the lesson to this file (update CLAUDE.md) so the next session starts ahead.
 ````
 
-In the frontend repository, replace the Stack section with: React and TypeScript web UI served by nginx, calling the services through the ingress under `/api/`. The package manager is not decided, so the agent must not infer one and must read the repo.
+In the frontend repository, replace the Stack section with: React and TypeScript web UI served by nginx, calling the services through the gateway under `/api/`. The package manager is not decided, so the agent must not infer one and must read the repo.
 
 After the standard sections, add the project-specific items below.
 
@@ -287,7 +287,7 @@ A service's `CLAUDE.md` should contain:
     - If the plan looks wrong or contradicts the code, say so instead of quietly diverging from it.
     - Never commit secrets.
 
-The frontend's `CLAUDE.md` uses items 1 to 4, 8, 9, and 10. Instead of 5 to 7 it describes the frontend stack, which services' endpoints it calls through the ingress under `/api/`, and where the contracts for those calls are.
+The frontend's `CLAUDE.md` uses items 1 to 4, 8, 9, and 10. Instead of 5 to 7 it describes the frontend stack, which services' endpoints it calls through the gateway under `/api/`, and where the contracts for those calls are.
 
 Suggested text for the sync rule (item 3):
 
@@ -316,7 +316,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 - Representatives create challenges with type (`personal` or `group`), questions, validity period, goal, budget, and amount per successful completion.
 - Publishes a challenge to the employees of its company. A published challenge is versioned, so a change never affects a submission already in progress.
 - When it receives a new challenge, it emits `ChallengePublished` with the fields defined in the contract, written through the transactional outbox in the same transaction as the challenge.
-- Provides a bootstrap endpoint such as `GET /api/v1/challenges/snapshot` that returns the current state (latest version) of all challenges, paginated. It is for service-to-service use and is not routed through the public ingress. A service that lost its copy, for example after a reboot or when started for the first time, rebuilds it from this endpoint.
+- Provides a bootstrap endpoint such as `GET /api/v1/challenges/snapshot` that returns the current state (latest version) of all challenges, paginated. It is for service-to-service use and is not routed through the public gateway. A service that lost its copy, for example after a reboot or when started for the first time, rebuilds it from this endpoint.
 - Serves the challenge and its questions to the frontend directly.
 - Does not validate submissions.
 - Consumes `ChallengeCompleted`, updates group progress, and checks the challenge's donation rule and remaining budget.

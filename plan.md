@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 338d9ec6e39ecd6d021b934e99294cc305c33e84044c20f6c68bcd64cd552e18 -->
+<!-- sha256: 43573da238514b1a7e0c99995c8358e7b28fcde022487243fc27ff641e1001d1 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -212,6 +212,17 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 - All work happens on short-lived branches created from `main` and merged back through a pull request.
 - A long-living `dev` branch is deliberately **not** used: long-living branches drift away from production code.
 
+**Branch naming convention** (defined in a comment on issue [#5](https://github.com/rso-project-team-14/general/issues/5)):
+
+```
+<initials>/<type>-<descriptive-name>
+```
+
+- `<initials>`: the first letter of the first name and the first letter of the surname of the person who owns the branch.
+- `<type>`: the kind of change, such as `feat` or `fix` (the comment says "feat/fix/etc.", without listing every type).
+- `<descriptive-name>`: a short name that says what the branch is for.
+- Example, for a person with initials AB: `ab/feat-add-health-endpoints`.
+
 **Staging through GitHub Environments, not branches.**
 - Two environments exist: `staging` and `production`. `staging` lets the microservices be tested together in a realistic setting before release.
 - Both are implemented with GitHub Environments (for environment-scoped secrets, variables, and optional approvals), not with separate branches.
@@ -222,7 +233,6 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 - Unfinished work stays on its branch until it is ready to merge, so branches must stay small and short-lived.
 
 **Still to be agreed in issue #5** (the issue only settled the model above):
-- Branch naming convention.
 - Pull request and review rules (required approvals, required checks, merge method).
 - Commit format. Conventional Commits is already assumed in #5.
 - Whether promotion from `staging` to `production` needs a manual approval (required reviewers) or is automatic.
@@ -279,7 +289,7 @@ A service's `CLAUDE.md` should contain:
 6. **Data.** Which database it owns and where its migrations live. It never reads or writes another service's database. Money is stored in cents. If the service keeps a read-only copy of another service's data (`participation` and the challenges), the rules from 1.8 for it.
 7. **Events.** Which events the service produces and consumes (see 1.7, which is provisional), and the outbox and idempotency requirements that apply to it.
 8. **Commands.** How to build, test, lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
-9. **Git and pull requests.** GitHub Flow as in 1.13: short-lived branches from `main`, merged through pull requests. Commit format is pending in issue #5.
+9. **Git and pull requests.** GitHub Flow as in 1.13: short-lived branches from `main`, named as defined there, merged through pull requests. Commit format is pending in issue #5.
 10. **Rules for Claude.**
     - Stay within this service's responsibility.
     - Do not resolve an open decision from 1.12 silently. Raise it as an issue or a change in `general`.

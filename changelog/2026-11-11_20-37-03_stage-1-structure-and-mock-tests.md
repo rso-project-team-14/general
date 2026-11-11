@@ -1,0 +1,5 @@
+# Stage 1 creates the structure of the Go services and adds mock tests
+
+Date: 2026-11-11 20:37:03 UTC
+
+Stage 1 also creates the structure of the Go services, so they already have the shape they keep later and endpoints can be added without reorganizing. Added to `docs/stages/stage-1-demo.md`: a goal sentence, a "Structure of a service" section (`cmd/<service>/main.go`, `internal/config`, `internal/domain` for the logic, `internal/http` for the HTTP side, and `internal/store` for the database side, with dependencies pointing one way and the store used through an interface), a "Mock tests" section (tests of the logic, the handlers, and the readiness check with a mock store, with no database, RabbitMQ, or network), and three checklist items. In `plan.md` section 1.4, the list of directories was replaced by a pointer to Stage 1, so the structure has one copy. The earlier layout in 1.4 (with `internal/messaging` and `migrations/`) was a suggestion and is replaced: those directories are added in later stages when needed. This follows a decision made in conversation.

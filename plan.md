@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: c4c4c6656a776191baca62b3b1e6a5768461c36f560b373804f1dc7396815894 -->
+<!-- sha256: 89d264e496211dd2b52fbf322e71e647f9407c6de51ca0f4961a1158650dcc69 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -84,7 +84,7 @@ general/
     └── donation-impact.md
 ```
 
-Each Go service follows the same internal layout in its own repository (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare. The frontend is not a Go project and has its own layout.
+Each Go service follows the same internal structure in its own repository. The structure is defined in Stage 1 (`docs/stages/stage-1-demo.md`), which is also where it is created and checked. The same structure keeps the services easy to review and to compare. The frontend is not a Go project and has its own layout.
 
 ### 1.5 Local development environment
 

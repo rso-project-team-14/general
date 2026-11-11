@@ -75,11 +75,4 @@ The `changelog/` directory is how the other repositories find out that something
 
 ## For the other repositories
 
-Each service repository's own `CLAUDE.md` (and the frontend's) should tell Claude to keep in sync with this repository. Suggested text:
-
-> Before implementing a feature, list the `changelog/` directory in the `general` repository (`rso-project-team-14/general`) and compare the newest file name with the one recorded below under "Last checked general changelog entry".
-> - If there are files newer than that one (file names start with a UTC timestamp, so alphabetical order is chronological), read them, then re-read the parts of `plan.md`, `docs/`, and `api/` they affect. Apply any changes that concern this repository, then update the "Last checked" line to the newest file name.
-> - If there are no newer files, do not re-read `plan.md`.
-> - Every document in `general` has its content hash on line 3 (`<!-- sha256: ... -->`, covering line 4 to the end). To check whether a specific document changed since you last read it, compare that line with the hash you recorded before reading the whole file.
->
-> Last checked general changelog entry: _none yet_
+Each service repository and the frontend repository has its own `CLAUDE.md`. What it must contain, including the suggested text that makes Claude keep in sync with this repository's changelog, is defined in `plan.md` section 1.14. That is the only copy, so update it there.

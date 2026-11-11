@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: a37052e8eb9a37b569845a90528e690d28b331cb6b5d094625fba62910926a0e -->
+<!-- sha256: d29047ef2a2e6878d0d9be2bc3ba14ec9639f2433cd2ec933fe5d334e88cab88 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -226,6 +226,39 @@ Source: issue [#8](https://github.com/rso-project-team-14/general/issues/8) (bra
 - Pull request and review rules (required approvals, required checks, merge method).
 - Commit format. Conventional Commits is already assumed in #5.
 - Whether promotion from `staging` to `production` needs a manual approval (required reviewers) or is automatic.
+
+### 1.14 CLAUDE.md in every repository
+
+Every service repository and the frontend repository has its own `CLAUDE.md`, created when the repository is initialized (for example with `/init`, then completed from this list). Keep it short and specific to that repository. Link to this plan instead of copying it, so the two cannot drift apart.
+
+A service's `CLAUDE.md` should contain:
+
+1. **Purpose and place.** The repository name, which service it is (short name from 1.3), a short paragraph on its responsibility with a link to its part of section 2.1, and what it explicitly does not do.
+2. **Link to `general`.** The repository `rso-project-team-14/general` is where the plan lives. `plan.md` is the source of truth for infrastructure, responsibilities, and stages, and the planned API contracts are in `api/`.
+3. **Sync with `general` (required).** The changelog rule below, together with the "Last checked general changelog entry" line.
+4. **Contracts.** Which contract documents in `general/api/` apply: the service's own and those of the services it talks to. Until the service is implemented, the planned contract is the guide. After that, the service's own OpenAPI spec and code are the truth, and any difference from the planned contract is reported through a change in `general`.
+5. **Stack and conventions.** Language and version, the internal layout of the repository, and a pointer to the runtime conventions in 1.6 (port, health endpoints, configuration variables, JSON logging, `X-Request-ID`, error format, UUID v4, UTC timestamps). List only the deviations or additions specific to this service.
+6. **Data.** Which database it owns and where its migrations live. It never reads or writes another service's database. Money is stored in cents. If the service keeps a read-only copy of another service's data (`participation` and the challenges), the rules from 1.8 for it.
+7. **Events.** Which events the service produces and consumes (see 1.7, which is provisional), and the outbox and idempotency requirements that apply to it.
+8. **Commands.** How to build, test, lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
+9. **Git and pull requests.** GitHub Flow as in 1.13: short-lived branches from `main`, merged through pull requests. Commit format is pending in issue #5.
+10. **Rules for Claude.**
+    - Stay within this service's responsibility.
+    - Do not resolve an open decision from 1.12 silently. Raise it as an issue or a change in `general`.
+    - Do not change another service's code or database.
+    - If the plan looks wrong or contradicts the code, say so instead of quietly diverging from it.
+    - Never commit secrets.
+
+The frontend's `CLAUDE.md` uses items 1 to 4, 8, 9, and 10. Instead of 5 to 7 it describes the frontend stack, which services' endpoints it calls through the ingress under `/api/`, and where the contracts for those calls are.
+
+Suggested text for the sync rule (item 3):
+
+> Before implementing a feature, list the `changelog/` directory in the `general` repository (`rso-project-team-14/general`) and compare the newest file name with the one recorded below under "Last checked general changelog entry".
+> - If there are files newer than that one (file names start with a UTC timestamp, so alphabetical order is chronological), read them, then re-read the parts of `plan.md`, `docs/`, and `api/` they affect. Apply any changes that concern this repository, then update the "Last checked" line to the newest file name.
+> - If there are no newer files, do not re-read `plan.md`.
+> - Every document in `general` has its content hash on line 3 (`<!-- sha256: ... -->`, covering line 4 to the end). To check whether a specific document changed since you last read it, compare that line with the hash you recorded before reading the whole file.
+>
+> Last checked general changelog entry: _none yet_
 
 ---
 

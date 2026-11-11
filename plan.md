@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 89d264e496211dd2b52fbf322e71e647f9407c6de51ca0f4961a1158650dcc69 -->
+<!-- sha256: ad446ce9f493f18eea7ce68fafe7eff5d475bda6e372f6894aedad10b46ab0f4 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -84,7 +84,28 @@ general/
     └── donation-impact.md
 ```
 
-Each Go service follows the same internal structure in its own repository. The structure is defined in Stage 1 (`docs/stages/stage-1-demo.md`), which is also where it is created and checked. The same structure keeps the services easy to review and to compare. The frontend is not a Go project and has its own layout.
+**Structure of a Go service**
+
+Every Go service has the same internal structure in its own repository. The code is split into directories by responsibility, so the logic, the HTTP side, and the database side are separate. The same structure keeps the services easy to review and to compare, and lets new endpoints be added without reorganizing anything. The services start following it in Stage 1 (`docs/stages/stage-1-demo.md`).
+
+```
+<service-repository>/
+├── cmd/<service>/main.go      # starts the program, wiring only
+└── internal/
+    ├── config/                # reads the configuration from environment variables
+    ├── domain/                # the logic of the service
+    ├── http/                  # everything about HTTP connections
+    └── store/                 # the database connection and the queries
+```
+
+- `cmd/<service>/main.go` reads the configuration, builds the parts, and starts the HTTP server. It contains no logic.
+- `internal/domain` is the logic. It knows nothing about HTTP or the database.
+- `internal/http` is the HTTP side: the router, the handlers, the middleware, and the endpoints. A handler only translates between HTTP and the logic. It holds no rules.
+- `internal/store` is the database side. It is used through an interface, so a test can replace it with a mock.
+- `internal/config` reads the configuration variables from 1.6 and hands them to the other parts.
+- Dependencies point one way: `http` uses `domain`, and `domain` uses neither `http` nor `store`.
+- Directories for later needs (for example RabbitMQ messaging and database migrations) are added next to the ones above when they are needed.
+- Adding an endpoint means adding the logic to `domain` and a handler and a route to `http`. `main.go` and the other directories stay as they are. The frontend is not a Go project and has its own layout.
 
 ### 1.5 Local development environment
 

@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: c87efa470d3fb7993b61dc73994c6a6c8ee2e33143cb67f60c66af2ceb4b8440 -->
+<!-- sha256: 96600f36dcb8b6b9e7be7d91eb49754f462041e8425bfbf1255246309616e63a -->
 
 Back to [plan.md](../../plan.md).
 
@@ -8,7 +8,7 @@ Back to [plan.md](../../plan.md).
 
 Verify that the whole setup works in the cloud environment. There is **no Butterfly Give business logic** in this stage. Every service only starts and answers basic API requests, and the whole thing runs in the cloud.
 
-This stage also creates the structure. The Go services get, already now, the shape they will keep later, with their code split into separate directories. The structure is defined here and checked with a few mock tests, so that later stages add endpoints and logic into it without reorganizing anything.
+This stage also starts following the structure of a Go service that is defined in `plan.md` section 1.4. The Go services get, already now, the shape they will keep later, with their code split into separate directories. The structure is checked with a few mock tests, so that later stages add endpoints and logic into it without reorganizing anything.
 
 ## Scope
 
@@ -18,7 +18,7 @@ This stage also creates the structure. The Go services get, already now, the sha
   - `GET /health/ready`: can reach its own database (PostgreSQL, or MongoDB for `challenge`). RabbitMQ is not checked in this stage.
   - `GET /health/live`: process is alive.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
-- The structure of a Go service (see "Structure of a service" below), the same in all four services.
+- The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer, and the database side only opens the connection and provides the check used by `/health/ready`.
 - Mock tests that check the structure (see "Mock tests" below).
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
 - A managed PostgreSQL service with three logical databases (`company_db`, `participation_db`, `impact_db`) and a managed MongoDB service with `challenge_db`, one database per service, all empty.
@@ -28,30 +28,6 @@ This stage also creates the structure. The Go services get, already now, the sha
 ### Out of scope
 - RabbitMQ. It is not set up in this stage.
 - Everything else: authentication, companies, challenges, participation, donations, impact, events, business rules, database tables, seed data, OpenAPI beyond the ping and health endpoints.
-
-## Structure of a service
-
-Every Go service has the same structure. The code is split into directories by responsibility, so the logic, the HTTP side, and the database side are separate:
-
-```
-<service-repository>/
-├── cmd/<service>/main.go      # starts the program, wiring only
-└── internal/
-    ├── config/                # reads the configuration from environment variables
-    ├── domain/                # the logic of the service
-    ├── http/                  # everything about HTTP connections
-    └── store/                 # the database connection and, later, the queries
-```
-
-- `cmd/<service>/main.go` reads the configuration, builds the parts, and starts the HTTP server. It contains no logic.
-- `internal/domain` is the logic. It knows nothing about HTTP or the database. In this stage it only builds the answer of the ping endpoint (service name, version, time).
-- `internal/http` is the HTTP side: the router, the handlers, the middleware, and the health and ping endpoints. A handler only translates between HTTP and the logic. It holds no rules.
-- `internal/store` is the database side. In this stage it only opens the connection and provides the check that `/health/ready` uses. It is used through an interface, so a test can replace it with a mock.
-- `internal/config` reads the configuration variables from the plan and hands them to the other parts.
-- Dependencies point one way: `http` uses `domain`, and `domain` uses neither `http` nor `store`.
-- Directories for later stages (for example for RabbitMQ messaging and for database migrations) are added when they are needed, next to the ones above.
-
-Adding an endpoint later means adding the logic to `domain` and a handler and a route to `http`. `main.go` and the other directories stay as they are.
 
 ## Mock tests
 
@@ -66,7 +42,7 @@ The tests in this stage are small and need no database, no RabbitMQ, and no netw
 ## Checklist
 
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
-- [ ] Each service has the structure from "Structure of a service", with the logic, the HTTP side, and the database side in separate directories
+- [ ] Each service has the structure from `plan.md` section 1.4, with the logic, the HTTP side, and the database side in separate directories
 - [ ] Mock tests exist for the logic, the handlers, and the readiness check, and `go test ./...` passes with no database or RabbitMQ running
 - [ ] `go test ./...` runs in the GitHub Actions pipeline
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`

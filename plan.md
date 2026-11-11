@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: dd045651941cb5ee3c01733623cce1f2664459698a875428e83f5b3ddc529e03 -->
+<!-- sha256: 72660ff5778597eb5d02f10f3272b1a51a48cc18663c86205dce9ca7a76a8828 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -42,7 +42,7 @@ Communication rules:
 - Asynchronous calls: RabbitMQ events, see section 1.7.
 - A service never reads or writes another service's database.
 - A service that needs data from another service calls its REST API or subscribes to events.
-- `participation` does not call `challenge` while users complete challenges. It keeps its own read-only copy of the challenges, built from `ChallengePublished` events. The only synchronous call is the bootstrap at startup (see 2.1, "Responsibility split").
+- `participation` does not call `challenge` while users complete challenges. It keeps its own read-only copy of the challenges, built from `ChallengePublished` events. The only synchronous call is the bootstrap at startup (see 1.7 and 1.12 item 12).
 
 ### 1.4 Repositories
 
@@ -277,7 +277,7 @@ After the standard sections, add the repository-specific items below. They are l
 
 A service's `CLAUDE.md` should contain:
 
-1. **Purpose and place.** Which service this repository is (the short name from 1.3) and a link to its part of section 2.1. Do not copy the description of its responsibility.
+1. **Purpose and place.** Which service this repository is (the short name from 1.3) and a link to its part of section 2.1 once that section is written. Do not copy the description of its responsibility.
 2. **Link to `general`.** The repository `rso-project-team-14/general`, where the plan lives, with a pointer to `plan.md` as the source of truth. Nothing more. In particular, no summary of the plan, and no restating of the git workflow, which is in 1.13.
 3. **Dependencies on `general` (required).** A table of the files in `general` that this repository depends on, each with a link and the hash recorded when the file was last read in full. The files are `plan.md`, the API contracts it depends on (its own and those of the services it talks to), and the stage document it is implementing. The suggested text below defines how the hashes are checked.
 4. **Repository specifics.** Only what is specific to this repository and is not in the plan: the language version, the internal layout of the repository, where the migrations live, deviations from the conventions in 1.6, and implementation choices for the events and data rules in 1.7 and 1.8. Never restate a convention or rule from the plan (for example UUID v4, the port, the health endpoints, money in cents, the database-per-service rule). If this repository has to differ from the plan, say so here as a deviation, and report it as a change in `general`.
@@ -313,60 +313,9 @@ Suggested text for the dependencies (item 3):
 
 ## Part 2: Microservice internals and delivery stages
 
-### 2.1 Internal logic of each service (summary)
+### 2.1 Internal logic of each service
 
-Detailed behavior, endpoints, and data models are defined in the stage documents. This section states the core responsibilities that stay the same across stages.
-
-**Company & Membership (`company-membership`)**
-- Creates companies and assigns a company admin (`representative`).
-- Generates invite codes and lets a user join a company with a code.
-- Stores membership and role (`employee` or `representative`).
-- Answers "who is this user's company" for other services through REST. Other services never query `company_db`.
-
-**Challenge (`challenge`)**
-- Representatives create challenges with type (`personal` or `group`), questions, validity period, goal, budget, and amount per successful completion.
-- Publishes a challenge to the employees of its company. A published challenge is versioned, so a change never affects a submission already in progress.
-- When it receives a new challenge, it emits `ChallengePublished` with the fields defined in the contract, written through the transactional outbox in the same transaction as the challenge.
-- Provides a bootstrap endpoint such as `GET /api/v1/challenges/snapshot` that returns the current state (latest version) of all challenges, paginated. It is for service-to-service use and is not routed through the public gateway. A service that lost its copy, for example after a reboot or when started for the first time, rebuilds it from this endpoint.
-- Serves the challenge and its questions to the frontend directly.
-- Does not validate submissions.
-- Consumes `ChallengeCompleted`, updates group progress, and checks the challenge's donation rule and remaining budget.
-- When the conditions for a donation are met, publishes `DonationAuthorized` and decreases the remaining budget in the same transaction as the outbox record.
-
-**Participation (`participation`)**
-- Keeps a **read-only copy of the challenges** in `participation_db`, built from `ChallengePublished` events. It applies an event only if its `version` is higher than the stored one, so duplicates and old events are harmless.
-- Bootstraps the copy at startup: it subscribes to the events first, then loads everything from the `challenge` snapshot endpoint, applying the same version rule. This way a reboot or a first start cannot leave gaps. It should report not started (`/health/started`) until the bootstrap is complete.
-- Starts a challenge for a user and records the answers.
-- Validates every submission itself, against its copy: the validity window, the challenge status, and the answers against the questions. A challenge it does not know is rejected with a clear error.
-- Enforces repeat-prevention: a user cannot complete the same challenge twice inside its window.
-- On a valid submission, records the completion and publishes `ChallengeCompleted` using a transactional outbox, so the event is never lost after the DB commit.
-- Keeps working when `challenge` is down. Only new challenges are missed until it is back.
-- Serves the user's history of completed challenges.
-
-**Donation & Impact (`donation-impact`)**
-- Stores charity organizations (seeded or managed through an admin endpoint, to be decided).
-- Consumes `DonationAuthorized` idempotently and writes a donation ledger entry.
-- Computes personal impact (per user) and aggregated impact (per company and per challenge, no names).
-
-**Frontend (`frontend`)**
-- Login and company join flow.
-- Challenge list with filters (personal, group, open, completed).
-- Survey view and completion (questions are loaded from `challenge`, answers are submitted to `participation`).
-- Impact dashboards for the user and for the company representative.
-- Challenge creation form for the representative.
-
-**Responsibility split between Challenge and Participation (decided)**
-
-`challenge` knows what is asked and what it is worth, plus the collective result. `participation` knows what one user did and whether it counts. Anything that needs other users' data (group progress, remaining budget, donation decision) belongs to `challenge`. Anything about a single user's submission (the attempt, validation, repeat-prevention, history) belongs to `participation`.
-
-`participation` stays a separate service. Per-user attempts and group-wide counters are different consistency problems, and `participation` now owns validation and a copy of the challenges, so it is not a thin service.
-
-Validation lives in `participation`, against a read-only copy of the challenges that it builds from events. `challenge` does not validate and is not called when a user completes a challenge. This means:
-- `participation` does not depend on `challenge` at runtime, except for the bootstrap at startup. If `challenge` is down, users can still complete the challenges `participation` already knows.
-- The copy is eventually consistent. A newly created challenge may be unknown to `participation` for a short time, and a submission for it is rejected until the event arrives.
-- `participation` has to understand what it receives (questions and validation rules), so the exact fields are a fixed contract between the two services, documented in `api/`. The databases are not coupled: `participation` stores the received fields in its own normal columns and never sees how `challenge` stores a challenge. A change to the contract is a deliberate change to both services, see 1.12 item 11.
-- The copy holds only what validation needs (type, validity window, status, questions and their rules), never budget, goal, or progress. Those stay in `challenge`.
-- Validation at completion and the later budget or goal check in the `ChallengeCompleted` handler can disagree, for example if the challenge runs out of budget in between. A valid submission that contributes nothing to a donation is a normal outcome, not an error.
+TO DO. This section is empty on purpose. The internal logic of each service will be planned together with the user stories and the description of how the application should work. Nothing here is decided yet.
 
 ### 2.2 Cross-service flow (the complex use case from the brief)
 

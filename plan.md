@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: abdedce381aa066083f6336bc44504d359f642ae8caf0d8967b683bbf14ec8be -->
+<!-- sha256: e8a8c547d1a848a96b195e304d530e51208f50e14a161b2994e935f6e63344d4 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -88,10 +88,7 @@ Each Go service follows the same internal layout in its own repository (`cmd/`, 
 
 ### 1.5 Local development environment
 
-- A local docker-compose stack (location: open decision, see 1.12 item 12) starts: one PostgreSQL container that hosts the three relational logical databases (`company_db`, `participation_db`, `impact_db`), one MongoDB container for `challenge_db`, one RabbitMQ container with management UI, the four services, and the frontend.
-- Each PostgreSQL service creates its own database role and schema at startup through its own migrations. `challenge` creates its own MongoDB user, collections, and indexes at startup.
-- MongoDB runs as a single-node replica set locally, because multi-document transactions (needed for the outbox and idempotency, see 1.7) require a replica set.
-- Every service reads its configuration from environment variables only. No config files with secrets are committed.
+TBD
 
 ### 1.6 Runtime conventions (apply to every service)
 

@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 8796eb3ad2fad6e5f2b1e6af9049270100fb79c8a081daf4c837761bd6a4d5ae -->
+<!-- sha256: 15b5e86ddbe0f137db6ec66e8d5acacb53d0f95685d035cf3c54a8d88603bc76 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -146,7 +146,7 @@ TBD
 ### 1.6 Runtime conventions (apply to every service)
 
 - **Ports:** HTTP on 8080 inside the container. Ports are set through the Kubernetes Service, not hard-coded elsewhere.
-- **Base path:** REST endpoints live under `/api/v1/...`.
+- **Base path:** inside a service, REST endpoints live under `/api/v1/...`, so every service has the same paths, for example `/api/v1/ping`. From outside, the gateway adds the service name to the path (see 1.10).
 - **Health:** three endpoints, one for each Kubernetes probe type.
   - `GET /health/started`: the service finished starting (configuration loaded, migrations applied, connections made, and for `participation` the challenge bootstrap complete). Until it succeeds, Kubernetes does not run the other two probes.
   - `GET /health/ready`: the service can handle requests now (its database and RabbitMQ are reachable). If it fails, the pod gets no traffic but is not restarted.
@@ -222,7 +222,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - Resources per container: small requests and limits, enough to fit a student-sized AKS node pool.
 - Startup, readiness, and liveness probes use `/health/started`, `/health/ready`, and `/health/live`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
-- **Gateway API with Envoy, not an Ingress.** The nginx Ingress controller is not used, because it is no longer supported. The cluster entry point is a Kubernetes Gateway API `Gateway`, with Envoy as the implementation behind it. `HTTPRoute` resources route `/` to the frontend and `/api/` to the services, with path-based routing to each service. The frontend container still serves its static files with its own nginx, which is unrelated to the Ingress controller.
+- **Gateway API with Envoy, not an Ingress.** The nginx Ingress controller is not used, because it is no longer supported. The cluster entry point is a Kubernetes Gateway API `Gateway`, with Envoy as the implementation behind it. `HTTPRoute` resources route `/` to the frontend and `/api/<service>/` to the matching service, where `<service>` is the short name from 1.3 (`company-membership`, `challenge`, `participation`, or `donation-impact`). The gateway rewrites the path before it reaches the service: it removes the service name, so `/api/challenge/v1/ping` arrives at the `challenge` service as `/api/v1/ping`. The services themselves never see the service name in the path. The frontend container still serves its static files with its own nginx, which is unrelated to the Ingress controller.
 - **PostgreSQL and MongoDB are managed services**, not run inside the cluster. The Helm charts therefore deploy no database. Each service gets its connection string and credentials from a Kubernetes Secret. Which managed products are used is still to be chosen.
 - **RabbitMQ hosting is an open decision**, see 1.12 item 2.
 

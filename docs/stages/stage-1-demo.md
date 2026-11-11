@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: a0ff7f0012d610feebd6d7cc319f68f4232410d3e9c0aa0ab58caee09525564c -->
+<!-- sha256: d190f1cfb04404974203c606358dd4065816616c3bdda1fe1193a70ea2ea0c30 -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -27,7 +27,7 @@ This stage also starts following the structure of a Go service that is defined i
 - The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer.
 - A `Makefile` in each Go service with the `build` and `test` targets from `plan.md` section 1.4.
 - Small tests of the logic and the handlers (see "Tests" below).
-- Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
+- Frontend page that calls the ping endpoint of each of the four services through the gateway (the paths are in `plan.md` section 1.10) and shows each response (green or red per service).
 - Done by the team: a Docker image for each service and for the frontend.
 - Done by the team: deployment to the cloud environment (AKS, with Helm and a basic GitHub Actions pipeline), so the page is reachable from the internet and shows all four services answering.
 

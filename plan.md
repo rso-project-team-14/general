@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 99f8eac0e6852b11b78b624e4288876acd802b63e4128cf1af7db3bcba1a71ac -->
+<!-- sha256: abdedce381aa066083f6336bc44504d359f642ae8caf0d8967b683bbf14ec8be -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -132,11 +132,11 @@ Event catalog (from the project brief):
 
 | Event | Producer | Consumers | Payload (summary) |
 |---|---|---|---|
-| `ChallengePublished` | challenge | participation | `challengeId`, `companyId`, `version`, `type`, `validFrom`, `validUntil`, `questions` and the other parts of the definition needed to validate a submission. Not the budget, goal, or progress |
+| `ChallengePublished` | challenge | participation | `challengeId`, `companyId`, `version`, `type`, `validFrom`, `validUntil`, `questions`, and the other fields `participation` needs to validate a submission, as fixed by the contract in `api/`. Not the budget, goal, or progress |
 | `ChallengeCompleted` | participation | challenge | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt` |
 | `DonationAuthorized` | challenge | donation-impact | `donationId`, `challengeId`, `companyId`, `organizationId`, `amount`, `currency`, `sourceChallengeIds` |
 
-`ChallengePublished` is emitted when `challenge` receives a new challenge. The payload is the full definition at that `version`, so a consumer needs no other source. Which other changes emit events (edit, close, withdraw) is an open decision, see 1.12 item 13.
+`ChallengePublished` is emitted when `challenge` receives a new challenge. The payload carries exactly the data `participation` needs at that `version`, as fixed by the contract, not the whole challenge. Which other changes emit events (edit, close, withdraw) is an open decision, see 1.12 item 13.
 
 `ChallengeCompleted` is only published after the submission passed validation in `participation`, so the payload carries no validity flag. Whether payloads carry `userId` is an open decision, see 1.12 item 9.
 
@@ -147,8 +147,9 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - One logical database per service. The three PostgreSQL databases live in the same PostgreSQL instance locally and in AKS. `challenge_db` lives in a separate MongoDB instance. Each service has its own credentials with access to its own database only.
 - PostgreSQL schema changes go through versioned migration files in each service's `migrations/` folder, applied at startup.
 - MongoDB (`challenge_db`) has no fixed table schema, so the flexible challenge shape is allowed. Fields every challenge must have (type, validity period, goal, budget, amount per success) are enforced by a MongoDB JSON Schema validator on the `challenges` collection. Challenge-specific content (for example survey questions) can vary per challenge. Indexes are created at startup.
+- **No coupling between databases.** Services share no tables and no schema, and how `challenge` stores a challenge internally is private to it. What one service sends to another is defined by a **fixed contract** in `api/` (endpoint shapes and event payloads). A consumer receives only the data it needs and keeps it in its own tables, shaped for its own use.
 - No foreign keys across databases. A reference to another service's entity is a plain UUID.
-- A service may keep a **read-only copy** of another service's data, built from events and a bootstrap endpoint of the owner. The copy is never written by anything except the event and bootstrap handling, and the owner stays the only source of truth. The one such copy for now is the challenges in `participation_db`. The flexible parts of a challenge definition are stored there as JSONB.
+- A service may keep a **read-only copy** of another service's data, built from events and a bootstrap endpoint of the owner. The copy is never written by anything except the event and bootstrap handling, and the owner stays the only source of truth. The one such copy for now is the challenges in `participation_db`. It holds only the fields named in the `ChallengePublished` contract, in normal columns of `participation_db` (PostgreSQL), with no JSONB or free-form data, because the contract is fixed.
 - Monetary amounts are stored as integers in cents, with an ISO 4217 currency code.
 
 ### 1.9 Security and privacy
@@ -195,9 +196,9 @@ These need an answer from the team or the course staff. Each stage document list
 8. **Personal challenges:** do they use the same flow as group challenges? If yes, is the goal of a personal challenge just one completion by that user, and does it also trigger a donation?
 9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
 10. **Stale copy in `participation`:** the copy of the challenges is eventually consistent. How long a gap is acceptable between a challenge being created or closed in `challenge` and `participation` knowing about it? Is a periodic re-sync from the snapshot endpoint needed as a safety net, or is the bootstrap at startup enough?
-11. **Challenge types and validation rules:** `participation` validates against the challenge definition, so it must understand it. How do we avoid changing both services for every new challenge type? Options: (a) rules expressed as data inside the definition (required questions, answer types, limits), interpreted by one generic validator in `participation`, (b) a validator per challenge type in `participation`. Survey is the only type for now.
+11. **Shape of the contract and new challenge types:** the `ChallengePublished` contract is fixed, and `participation` stores it in normal columns. Challenges can still differ in content (survey questions now, other types later). How are the questions and validation rules expressed as fixed fields? And how is a new challenge type added later, for example as a new contract version that `participation` handles next to the old one? Survey is the only type for now.
 12. **Should `participation` stay a separate service?** It now owns validation and a copy of the challenges, so it is no longer thin. The earlier concern is mostly gone. Revisit only if keeping the copy in sync proves painful.
-13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the full definition per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Readiness [`participation` not ready until the bootstrap is complete].
+13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Readiness [`participation` not ready until the bootstrap is complete].
 12. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
 
 ### 1.13 Git workflow and environments
@@ -241,7 +242,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 **Challenge (`challenge`)**
 - Representatives create challenges with type (`personal` or `group`), questions, validity period, goal, budget, and amount per successful completion.
 - Publishes a challenge to the employees of its company. A published challenge is versioned, so a change never affects a submission already in progress.
-- When it receives a new challenge, it emits `ChallengePublished` with the full definition, written through the transactional outbox in the same transaction as the challenge.
+- When it receives a new challenge, it emits `ChallengePublished` with the fields defined in the contract, written through the transactional outbox in the same transaction as the challenge.
 - Provides a bootstrap endpoint such as `GET /api/v1/challenges/snapshot` that returns the current state (latest version) of all challenges, paginated. It is for service-to-service use and is not routed through the public ingress. A service that lost its copy, for example after a reboot or when started for the first time, rebuilds it from this endpoint.
 - Serves the challenge and its questions to the frontend directly.
 - Does not validate submissions.
@@ -277,7 +278,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 Validation lives in `participation`, against a read-only copy of the challenges that it builds from events. `challenge` does not validate and is not called when a user completes a challenge. This means:
 - `participation` does not depend on `challenge` at runtime, except for the bootstrap at startup. If `challenge` is down, users can still complete the challenges `participation` already knows.
 - The copy is eventually consistent. A newly created challenge may be unknown to `participation` for a short time, and a submission for it is rejected until the event arrives.
-- `participation` has to understand the definition of a challenge (questions and validation rules), so the shape of the definition is part of the contract between the two services, documented in `api/`. How this stays manageable as challenge types grow is an open decision, see 1.12 item 11.
+- `participation` has to understand what it receives (questions and validation rules), so the exact fields are a fixed contract between the two services, documented in `api/`. The databases are not coupled: `participation` stores the received fields in its own normal columns and never sees how `challenge` stores a challenge. A change to the contract is a deliberate change to both services, see 1.12 item 11.
 - The copy holds only what validation needs (type, validity window, status, questions and their rules), never budget, goal, or progress. Those stay in `challenge`.
 - Validation at completion and the later budget or goal check in the `ChallengeCompleted` handler can disagree, for example if the challenge runs out of budget in between. A valid submission that contributes nothing to a donation is a normal outcome, not an error.
 

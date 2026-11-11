@@ -12,8 +12,9 @@
 # The hash is the SHA-256 of everything from line 4 to the end of the file,
 # byte for byte. Lines 1 to 3 are not hashed.
 #
-# Documents covered: every *.md file in the repository except those in
-# changelog/ (changelog entries are written once and not changed).
+# Documents covered: every *.md file in the repository except CLAUDE.md
+# (never read by other repositories) and those in changelog/ (changelog
+# entries are written once and not changed).
 #
 # Usage:
 #   scripts/doc-hash.sh            recalculate and write the hashes (same as "update")
@@ -41,6 +42,7 @@ list_docs() {
   find . -type f -name '*.md' \
     -not -path './.git/*' \
     -not -path './changelog/*' \
+    -not -path './CLAUDE.md' \
     | sed 's|^\./||' | LC_ALL=C sort
 }
 

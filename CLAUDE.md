@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-<!-- sha256: 699d3715a7a1844ced4b27cf93d49b0c19301c63561f8673fc7a4676483e3c15 -->
-
 This is the `general` repository of the Butterfly Give project (team 14).
 
 ## What this repository is
@@ -47,7 +45,7 @@ Issues in the other repositories are named with the repository name as a prefix,
 
 ## Document hashes
 
-Every Markdown document in this repository (including this file) carries a content hash on line 3, so that people and agents can tell whether a document changed without reading it. Exceptions: the files in `changelog/`, which are written once and not changed, and the PDF.
+Every Markdown document in this repository carries a content hash on line 3, so that people and agents can tell whether a document changed without reading it. Exceptions: this file (`CLAUDE.md`), which is never read by other repositories, the files in `changelog/`, which are written once and not changed, and the PDF.
 
 Layout of a document:
 

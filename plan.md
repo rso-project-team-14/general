@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 818ef5515d8b99d74c546ca9ac31726821425a2c9206017f8261365255950750 -->
+<!-- sha256: 64e3298a39ade1dd5f2325d3c238b9a8ae94ef082e1c52f24ef96409a7d8c5f1 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -94,7 +94,8 @@ Every Go service has the same internal structure in its own repository. The code
 └── internal/
     ├── config/                # reads the configuration from environment variables
     ├── domain/                # the logic of the service
-    ├── http/                  # everything about HTTP connections
+    ├── http/                  # everything about incoming HTTP connections
+    ├── client/                # outgoing calls to other services or to outside
     └── store/                 # the database connection and the queries
 ```
 
@@ -102,9 +103,11 @@ Every Go service has the same internal structure in its own repository. The code
 - `internal/domain` is the logic. It knows nothing about HTTP. It reaches the database through an interface that it defines itself, which lists what the logic needs from storage (for example "save this", "load that", "is the database reachable").
 - `internal/http` is the HTTP side: the router, the handlers, the middleware, and the endpoints. A handler only translates between HTTP and the logic. It holds no rules.
 - `internal/store` is the database side. It implements the interface that `domain` defines. Because the logic only sees the interface, a test can replace the store with a mock.
+- `internal/client` is the outgoing calls, to other services or to outside. It only makes the call: it builds the request, sets timeouts, passes the `X-Request-ID` header on, and turns the response into the logic's own types and errors. It holds no rules. Like the store, it implements an interface that `domain` defines, so a test can replace it with a mock. With several targets it gets one subdirectory per target, such as `client/challenge/`.
 - `internal/config` reads the configuration variables from 1.6 and hands them to the other parts.
-- Dependencies point one way: `http` calls `domain`, and `domain` calls the store through its interface. `store` and `domain` know nothing about `http`, and `domain` does not import the `store` package. `main.go` connects the parts: it creates the store and passes it to the logic, and passes the logic to the HTTP side. A handler never uses the store directly, so even the readiness check goes through the logic.
-- Directories for later needs (for example RabbitMQ messaging and database migrations) are added next to the ones above when they are needed.
+- Dependencies point one way: `http` calls `domain`, and `domain` calls the store and the clients through interfaces that it defines. `store`, `client`, and `domain` know nothing about `http`, and `domain` does not import the `store` or `client` packages. `main.go` connects the parts: it creates the store and the clients and passes them to the logic, and passes the logic to the HTTP side. A handler never uses the store or a client directly, so even the readiness check goes through the logic.
+- All Go code except `main.go` is under `internal/`, so other modules cannot import it. A package at the repository root, outside `internal/`, would be added only to publish something to other modules on purpose (see 1.12 item 14).
+- Directories for later needs (for example RabbitMQ messaging, which follows the same pattern as the store and the clients, and database migrations) are added next to the ones above when they are needed.
 - Adding an endpoint means adding the logic to `domain` and a handler and a route to `http`. `main.go` and the other directories stay as they are. The frontend is not a Go project and has its own layout.
 
 ### 1.5 Local development environment
@@ -223,6 +226,7 @@ These need an answer from the team or the course staff. Each stage document list
 11. **Shape of the contract and new challenge types:** the `ChallengePublished` contract is fixed, and `participation` stores it in normal columns. Challenges can still differ in content (survey questions now, other types later). How are the questions and validation rules expressed as fixed fields? And how is a new challenge type added later, for example as a new contract version that `participation` handles next to the old one? Survey is the only type for now.
 12. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Startup [`participation` not started until the bootstrap is complete].
 13. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
+14. **Shared client code:** should a service publish a client for the others to import (a package at its repository root, or a small separate module)? Today each service writes its own `internal/client` against the contract in `api/`, which shares no code and keeps the repositories independent, and that stays the default. Whether code is shared between repositories is discussed in issue #6.
 
 ### 1.13 Git workflow and environments
 

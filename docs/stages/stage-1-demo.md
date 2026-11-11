@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 96600f36dcb8b6b9e7be7d91eb49754f462041e8425bfbf1255246309616e63a -->
+<!-- sha256: dd9053efa0211b771d308830c381b6da5e7cc2b4dbaeacffbf190092edbd06b4 -->
 
 Back to [plan.md](../../plan.md).
 
@@ -37,13 +37,15 @@ The tests in this stage are small and need no database, no RabbitMQ, and no netw
 - A test of each `http` handler with a standard test HTTP server, checking the status code and the shape of the JSON.
 - A test of `/health/ready` with a mock of the `store` check, once reporting the database as reachable and once as unreachable.
 
+**The database and the client are mocked.** In every test the `store` and the `client` are replaced by mocks that implement the interfaces defined by `domain`. A test never uses a real database or makes a real outgoing call. This stage has no outgoing calls yet, so only the mock database is needed now. The first mock client comes with the first outgoing call.
+
 `go test ./...` runs all of them.
 
 ## Checklist
 
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
 - [ ] Each service has the structure from `plan.md` section 1.4, with the logic, the HTTP side, and the database side in separate directories
-- [ ] Mock tests exist for the logic, the handlers, and the readiness check, and `go test ./...` passes with no database or RabbitMQ running
+- [ ] Mock tests exist for the logic, the handlers, and the readiness check, with the database and the client mocked, and `go test ./...` passes with no database or RabbitMQ running
 - [ ] `go test ./...` runs in the GitHub Actions pipeline
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
 - [ ] `/health/ready` fails when the service's own database is unreachable

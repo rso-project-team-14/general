@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 1f8a689a06fa6331d66582b4b773b10cf6d6aad1a9d8a7141440fd5ae985ac28 -->
+<!-- sha256: 4c949e1306cf4a2ae8ff76e4869d377064e4f96884cd202aa9e67ed2a1c9927a -->
 
 Back to [plan.md](../../plan.md).
 
@@ -27,7 +27,7 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 
 ## Checklist
 
-- [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4 (the location of the deployment files is open, see `plan.md` 1.12 item 13)
+- [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
 - [ ] `/health/ready` fails when the service's own database is unreachable
 - [ ] Frontend page shows the ping result for all four services
@@ -35,8 +35,3 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 - [ ] Helm deploys the whole system into AKS
 - [ ] GitHub Actions builds the images and deploys on merge to main
 - [ ] The deployed page shows all four services answering from the cloud
-
-## Open decisions this stage depends on
-
-- Plan 1.12 item 2 (which managed products are used for PostgreSQL and MongoDB). RabbitMQ hosting, the other part of that item, is not needed in this stage.
-- Plan 1.12 item 3 (infrastructure as code or Azure CLI scripts).

@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 1c621c218985788645bfa75f8f07493f427d000721f229857fd1edaa9b9a988a -->
+<!-- sha256: bfd6e3bdc9c10d9a7b2e63e5a5634e2910cce55a0e41b934a765f3f2e970c3f1 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -56,8 +56,9 @@ There is no monorepo. Every microservice has its own repository, the frontend ha
 | `participation-service` | `participation` service |
 | `impact-service` | `donation-impact` service |
 | `frontend` | React + TypeScript frontend (repository to be created) |
+| `deploy` | Deployment: the umbrella Helm chart, the per-service charts, the values per environment, the deploy workflows, and the `staging` and `production` GitHub Environments with their secrets (repository to be created) |
 
-Where the deployment files (Helm charts, local docker-compose stack) live is an open decision, see 1.12 item 12.
+The Helm charts and everything else about deploying live in the `deploy` repository. They are not in `general` (documentation only) and not in the service repositories. The local development setup is still TBD, see 1.5.
 
 **Source of truth for API contracts**
 - Before implementation, the planned contract lives in `general` (`api/`). It is a contract document, not an OpenAPI spec.
@@ -165,7 +166,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 ### 1.10 Kubernetes and Helm layout
 
 - One Deployment and one Service per microservice and one for the frontend.
-- One Helm chart per service, plus an umbrella chart that deploys all of them together.
+- One Helm chart per service, plus an umbrella chart that deploys all of them together. All charts live in the `deploy` repository (see 1.4).
 - Resources per container: small requests and limits, enough to fit a student-sized AKS node pool.
 - Startup, readiness, and liveness probes use `/health/started`, `/health/ready`, and `/health/live`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
@@ -175,13 +176,14 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 
 ### 1.11 CI/CD
 
-GitHub Actions builds, tests, and deploys the system. Deployments target two **GitHub Environments**, `staging` and `production`. Each environment holds its own secrets, variables, and optional protection rules (such as required reviewers), so the same workflow deploys to either one. See 1.13 for the branching model.
+GitHub Actions builds, tests, and deploys the system. Building and testing happen in each service repository. Deploying happens in the `deploy` repository. Deployments target two **GitHub Environments**, `staging` and `production`. GitHub Environments belong to one repository, so they live in `deploy`, together with their secrets, variables, and optional protection rules (such as required reviewers). The same workflow deploys to either one. See 1.13 for the branching model.
 
 GitHub Actions workflows:
-1. **On pull request:** lint, unit tests, OpenAPI validation, Docker build (no push).
-2. **On merge to main:** build and tag images, push to the container registry, and deploy to the `staging` environment with `helm upgrade --install`.
-3. **Promotion to production:** the same image tags that passed in `staging` are deployed to the `production` environment. The `production` environment can require an approval before the job runs.
-4. **Manual:** deploy a chosen image tag to a chosen environment (`staging` or `production`).
+1. **In a service repository, on pull request:** lint, unit tests, OpenAPI validation, Docker build (no push).
+2. **In a service repository, on merge to main:** build and tag the image and push it to the container registry. How the `deploy` repository learns about the new image is an open decision, see 1.12 item 14.
+3. **In `deploy`, deploy to `staging`:** run `helm upgrade --install` against the AKS cluster for the `staging` environment with the new image tag.
+4. **In `deploy`, promotion to production:** the same image tags that passed in `staging` are deployed to the `production` environment. The `production` environment can require an approval before the job runs.
+5. **In `deploy`, manual:** deploy a chosen image tag to a chosen environment (`staging` or `production`).
 
 Container registry: **open decision**, see 1.12. Default assumption: Azure Container Registry.
 
@@ -202,7 +204,7 @@ These need an answer from the team or the course staff. Each stage document list
 11. **Shape of the contract and new challenge types:** the `ChallengePublished` contract is fixed, and `participation` stores it in normal columns. Challenges can still differ in content (survey questions now, other types later). How are the questions and validation rules expressed as fixed fields? And how is a new challenge type added later, for example as a new contract version that `participation` handles next to the old one? Survey is the only type for now.
 12. **Should `participation` stay a separate service?** It now owns validation and a copy of the challenges, so it is no longer thin. The earlier concern is mostly gone. Revisit only if keeping the copy in sync proves painful.
 13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Startup [`participation` not started until the bootstrap is complete].
-12. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
+14. **How does the `deploy` repository learn about a new image?** Options: the service pipeline triggers the deploy workflow (for example with a `repository_dispatch` event), the service pipeline opens a pull request in `deploy` that bumps the image tag, or the deploy workflow is started by hand with a chosen tag. This decides how automatic the deploy to `staging` is.
 
 ### 1.13 Git workflow and environments
 
@@ -287,6 +289,8 @@ A service's `CLAUDE.md` should contain:
     - Do not change another service's code or database.
     - If the plan looks wrong or contradicts the code, say so instead of quietly diverging from it.
     - Never commit secrets.
+
+The `deploy` repository's `CLAUDE.md` uses the standard sections with its own Stack section (Helm, Kubernetes, GitHub Actions and GitHub Environments), and items 1 to 4, 8, 9, and 10.
 
 The frontend's `CLAUDE.md` uses items 1 to 4, 8, 9, and 10. Instead of 5 to 7 it describes the frontend stack, which services' endpoints it calls through the gateway under `/api/`, and where the contracts for those calls are.
 

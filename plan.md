@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 2d326075134366febd043cbf3771f5e23f9bab58c6761e09d7c2f33fe5382415 -->
+<!-- sha256: 9c345067af439d28722e733435884c287b62ec56cc41815ac984a6d99ddb964e -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -190,7 +190,7 @@ Container registry: **open decision**, see 1.12. Default assumption: Azure Conta
 These need an answer from the team or the course staff. Each stage document lists the decisions it depends on.
 
 1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Not needed for Stage 1.
-2. **RabbitMQ hosting:** run it inside the cluster (installed with Helm or an operator), or use a managed RabbitMQ service from a third party. This is still to be decided. PostgreSQL and MongoDB are already decided as managed services (see 1.10), but which managed products to use is also still to be chosen. Needed for Stage 1.
+2. **Hosting of the data services:** PostgreSQL and MongoDB are already decided as managed services (see 1.10), but which managed products to use is still to be chosen. Needed for Stage 1. RabbitMQ hosting is also still to be decided: run it inside the cluster (installed with Helm or an operator), or use a managed RabbitMQ service from a third party. Not needed for Stage 1.
 3. **Infrastructure as code:** plain Azure CLI scripts, or Terraform / Bicep for the AKS cluster. Needed for Stage 1.
 4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.

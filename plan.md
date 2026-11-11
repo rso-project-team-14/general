@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 8cb74dc9e786b450cf93b602292257cdea383018a52a08efb98a6d82458403de -->
+<!-- sha256: 23e237c0af42cecb5f290d9ba240c572279362ba0a5a3bd613c868d92cf468ea -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -216,7 +216,7 @@ The open questions about this design are in 1.12 (items 10, 11, and 12).
 - MongoDB (`challenge_db`) has no fixed table schema, so the flexible challenge shape is allowed. Fields every challenge must have (type, validity period, goal, budget, amount per success) are enforced by a MongoDB JSON Schema validator on the `challenges` collection. Challenge-specific content (for example survey questions) can vary per challenge. Indexes are created at startup.
 - **No coupling between databases.** Services share no tables and no schema, and how `challenge` stores a challenge internally is private to it. What one service sends to another is defined by a **fixed contract** in `api/` (endpoint shapes and event payloads). A consumer receives only the data it needs and keeps it in its own tables, shaped for its own use.
 - No foreign keys across databases. A reference to another service's entity is a plain UUID.
-- A service may keep a **read-only copy** of another service's data, built from events and a bootstrap endpoint of the owner. The copy is never written by anything except the event and bootstrap handling, and the owner stays the only source of truth. The one such copy for now is the challenges in `participation_db`. It holds only the fields named in the `ChallengePublished` contract, in normal columns of `participation_db` (PostgreSQL), with no JSONB or free-form data, because the contract is fixed.
+- A service may keep a **read-only copy** of another service's data, built from events and the snapshot endpoint of the owner (see 1.7). The copy is never written by anything except the event and snapshot handling, and the owner stays the only source of truth. The one such copy for now is the challenges in `participation_db`. It holds only the fields named in the `ChallengePublished` contract, in normal columns of `participation_db` (PostgreSQL), with no JSONB or free-form data, because the contract is fixed.
 - Monetary amounts are stored as integers in cents, with an ISO 4217 currency code.
 
 ### 1.9 Security and privacy

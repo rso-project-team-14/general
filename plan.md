@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 26960cc2e3165f9a3b07f7110abb236f3689e87b1d7ab4f2d93d8430c6889616 -->
+<!-- sha256: 99f8eac0e6852b11b78b624e4288876acd802b63e4128cf1af7db3bcba1a71ac -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -18,7 +18,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 |---|---|
 | Frontend | React + TypeScript, responsive SPA, served by nginx |
 | Backend | Go, REST APIs, one binary per microservice |
-| Data | PostgreSQL, database-per-service (one logical DB per service) |
+| Data | Database-per-service (one logical DB per service). PostgreSQL for `company-membership`, `participation`, and `donation-impact`. MongoDB for `challenge`, because challenges have varied, unpredictable shapes that suit a document model better than fixed tables |
 | Async messaging | RabbitMQ for business events |
 | Containers | Docker images per service and for the frontend |
 | Orchestration | Kubernetes on Azure Kubernetes Service (AKS) |
@@ -31,7 +31,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Service | Short name | Owns database | Responsibility |
 |---|---|---|---|
 | Company & Membership | `company-membership` | `company_db` | Companies, memberships, invite codes, user roles within a company |
-| Challenge | `challenge` | `challenge_db` | Challenge templates and challenges, questions, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision. Publishes challenges to other services as events and through a bootstrap endpoint |
+| Challenge | `challenge` | `challenge_db` (MongoDB) | Challenge templates and challenges, questions, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision. Publishes challenges to other services as events and through a bootstrap endpoint |
 | Participation | `participation` | `participation_db` | Starting and completing challenges, survey answers, **validation of submissions** against its own read-only copy of the challenges, repeat-prevention |
 | Donation & Impact | `donation-impact` | `impact_db` | Charity organizations, donation ledger, personal and aggregated impact |
 
@@ -84,12 +84,13 @@ general/
     └── donation-impact.md
 ```
 
-Each Go service follows the same internal layout in its own repository (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/`). The same layout keeps the services easy to review and to compare. The frontend is not a Go project and has its own layout.
+Each Go service follows the same internal layout in its own repository (`cmd/`, `internal/http`, `internal/domain`, `internal/store`, `internal/messaging`, `migrations/` for the PostgreSQL services; `challenge` keeps its index and validation setup in the same place). The same layout keeps the services easy to review and to compare. The frontend is not a Go project and has its own layout.
 
 ### 1.5 Local development environment
 
-- A local docker-compose stack (location: open decision, see 1.12 item 12) starts: one PostgreSQL container that hosts the four logical databases (`company_db`, `challenge_db`, `participation_db`, `impact_db`), one RabbitMQ container with management UI, the four services, and the frontend.
-- Each service creates its own database role and schema at startup through its own migrations.
+- A local docker-compose stack (location: open decision, see 1.12 item 12) starts: one PostgreSQL container that hosts the three relational logical databases (`company_db`, `participation_db`, `impact_db`), one MongoDB container for `challenge_db`, one RabbitMQ container with management UI, the four services, and the frontend.
+- Each PostgreSQL service creates its own database role and schema at startup through its own migrations. `challenge` creates its own MongoDB user, collections, and indexes at startup.
+- MongoDB runs as a single-node replica set locally, because multi-document transactions (needed for the outbox and idempotency, see 1.7) require a replica set.
 - Every service reads its configuration from environment variables only. No config files with secrets are committed.
 
 ### 1.6 Runtime conventions (apply to every service)
@@ -97,7 +98,7 @@ Each Go service follows the same internal layout in its own repository (`cmd/`, 
 - **Ports:** HTTP on 8080 inside the container. Ports are set through the Kubernetes Service, not hard-coded elsewhere.
 - **Base path:** REST endpoints live under `/api/v1/...`.
 - **Health:** `GET /healthz` (process alive) and `GET /readyz` (DB and RabbitMQ reachable).
-- **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`. `DATABASE_URL` is a PostgreSQL connection string.
+- **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`. `DATABASE_URL` is a PostgreSQL connection string, except in `challenge`, where it is a MongoDB connection string.
 - **Logging:** structured JSON logs to stdout. Each request has an `X-Request-ID` header. It is generated at the edge if missing, returned in responses, and included in every log line.
 - **Errors:** RFC 7807 `application/problem+json` for all 4xx and 5xx responses.
 - **Timestamps:** UTC, ISO 8601 with `Z`.
@@ -112,7 +113,7 @@ Each Go service follows the same internal layout in its own repository (`cmd/`, 
 - **Delivery:** at-least-once. Every consumer must be idempotent.
 - **Queues:** one durable queue per consuming service, bound to the routing keys it needs. For example, `challenge.challenge-completed`.
 - **Failures:** each queue has a dead-letter exchange `butterfly.events.dlx`. Messages that fail after 3 retries go there and are logged.
-- **Idempotency:** every consumer keeps a `processed_events(event_id PRIMARY KEY, processed_at)` table in its own database. The event is applied and recorded in the same transaction.
+- **Idempotency:** every consumer keeps a `processed_events(event_id PRIMARY KEY, processed_at)` table in its own database (a `processed_events` collection with `event_id` as `_id` in `challenge_db`). The event is applied and recorded in the same transaction.
 
 Event envelope (JSON, every event):
 
@@ -131,11 +132,11 @@ Event catalog (from the project brief):
 
 | Event | Producer | Consumers | Payload (summary) |
 |---|---|---|---|
-| `ChallengePublished` | challenge | participation | `challengeId`, `companyId`, `version`, `type`, `validFrom`, `validUntil`, `questions`, and the other fields `participation` needs to validate a submission, as defined in the contract in `api/`. Not the budget, goal, or progress |
+| `ChallengePublished` | challenge | participation | `challengeId`, `companyId`, `version`, `type`, `validFrom`, `validUntil`, `questions` and the other parts of the definition needed to validate a submission. Not the budget, goal, or progress |
 | `ChallengeCompleted` | participation | challenge | `participationId`, `challengeId`, `companyId`, `userId`, `completedAt` |
 | `DonationAuthorized` | challenge | donation-impact | `donationId`, `challengeId`, `companyId`, `organizationId`, `amount`, `currency`, `sourceChallengeIds` |
 
-`ChallengePublished` is emitted when `challenge` receives a new challenge. The payload carries exactly the data `participation` needs at that `version`, as fixed by the contract, not the whole challenge. Which other changes emit events (edit, close, withdraw) is an open decision, see 1.12 item 13.
+`ChallengePublished` is emitted when `challenge` receives a new challenge. The payload is the full definition at that `version`, so a consumer needs no other source. Which other changes emit events (edit, close, withdraw) is an open decision, see 1.12 item 13.
 
 `ChallengeCompleted` is only published after the submission passed validation in `participation`, so the payload carries no validity flag. Whether payloads carry `userId` is an open decision, see 1.12 item 9.
 
@@ -143,12 +144,11 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 
 ### 1.8 Data ownership and schema rules
 
-- One logical database per service. All four live in the same PostgreSQL instance locally and in AKS, but each service has its own credentials with access to its own database only.
-- Schema changes go through versioned migration files in each service's `migrations/` folder, applied at startup.
-- Challenges have a **defined schema**, with normal tables. There is no flexible or free-form shape.
-- **No coupling between databases.** Services share no tables and no schema. What one service sends to another is defined by a contract in `api/` (endpoint shapes and event payloads). A consumer receives only the data it needs, and keeps it in its own tables shaped for its own use.
+- One logical database per service. The three PostgreSQL databases live in the same PostgreSQL instance locally and in AKS. `challenge_db` lives in a separate MongoDB instance. Each service has its own credentials with access to its own database only.
+- PostgreSQL schema changes go through versioned migration files in each service's `migrations/` folder, applied at startup.
+- MongoDB (`challenge_db`) has no fixed table schema, so the flexible challenge shape is allowed. Fields every challenge must have (type, validity period, goal, budget, amount per success) are enforced by a MongoDB JSON Schema validator on the `challenges` collection. Challenge-specific content (for example survey questions) can vary per challenge. Indexes are created at startup.
 - No foreign keys across databases. A reference to another service's entity is a plain UUID.
-- A service may keep a **read-only copy** of another service's data, built from events and a bootstrap endpoint of the owner. The copy is never written by anything except the event and bootstrap handling, and the owner stays the only source of truth. The one such copy for now is the challenges in `participation_db`. It holds only the fields named in the `ChallengePublished` contract, not the full challenge.
+- A service may keep a **read-only copy** of another service's data, built from events and a bootstrap endpoint of the owner. The copy is never written by anything except the event and bootstrap handling, and the owner stays the only source of truth. The one such copy for now is the challenges in `participation_db`. The flexible parts of a challenge definition are stored there as JSONB.
 - Monetary amounts are stored as integers in cents, with an ISO 4217 currency code.
 
 ### 1.9 Security and privacy
@@ -167,7 +167,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - Readiness and liveness probes use `/readyz` and `/healthz`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
 - An Ingress routes `/` to the frontend and `/api/` to the services, with path-based routing to each service.
-- PostgreSQL and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or managed services.
+- PostgreSQL, MongoDB, and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or managed services.
 
 ### 1.11 CI/CD
 
@@ -186,7 +186,7 @@ Container registry: **open decision**, see 1.12. Default assumption: Azure Conta
 These need an answer from the team or the course staff. Each stage document lists the decisions it depends on.
 
 1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Not needed for Stage 1.
-2. **Data services in AKS:** in-cluster PostgreSQL and RabbitMQ through Helm, or Azure Database for PostgreSQL and a RabbitMQ container. Needed for Stage 1.
+2. **Data services in AKS:** in-cluster PostgreSQL, MongoDB, and RabbitMQ through Helm, or Azure Database for PostgreSQL, a managed MongoDB-compatible service (for example Azure Cosmos DB for MongoDB), and a RabbitMQ container. Needed for Stage 1.
 3. **Infrastructure as code:** plain Azure CLI scripts, or Terraform / Bicep for the AKS cluster. Needed for Stage 1.
 4. **Charity organizations:** seeded data only, or an admin endpoint to add them. Not needed for Stage 1.
 5. **Currency:** single currency (EUR) or multiple. Default assumption: EUR only.
@@ -195,9 +195,9 @@ These need an answer from the team or the course staff. Each stage document list
 8. **Personal challenges:** do they use the same flow as group challenges? If yes, is the goal of a personal challenge just one completion by that user, and does it also trigger a donation?
 9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
 10. **Stale copy in `participation`:** the copy of the challenges is eventually consistent. How long a gap is acceptable between a challenge being created or closed in `challenge` and `participation` knowing about it? Is a periodic re-sync from the snapshot endpoint needed as a safety net, or is the bootstrap at startup enough?
-11. **New challenge types:** challenges have a fixed schema and `participation` validates against the fields in the contract. Survey is the only type for now. How is a new challenge type added later? For example, a new contract version of `ChallengePublished` that `participation` handles next to the old one, or a type field with its own set of fields per type.
+11. **Challenge types and validation rules:** `participation` validates against the challenge definition, so it must understand it. How do we avoid changing both services for every new challenge type? Options: (a) rules expressed as data inside the definition (required questions, answer types, limits), interpreted by one generic validator in `participation`, (b) a validator per challenge type in `participation`. Survey is the only type for now.
 12. **Should `participation` stay a separate service?** It now owns validation and a copy of the challenges, so it is no longer thin. The earlier concern is mostly gone. Revisit only if keeping the copy in sync proves painful.
-13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Readiness [`participation` not ready until the bootstrap is complete].
+13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the full definition per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Readiness [`participation` not ready until the bootstrap is complete].
 12. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
 
 ### 1.13 Git workflow and environments
@@ -241,7 +241,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 **Challenge (`challenge`)**
 - Representatives create challenges with type (`personal` or `group`), questions, validity period, goal, budget, and amount per successful completion.
 - Publishes a challenge to the employees of its company. A published challenge is versioned, so a change never affects a submission already in progress.
-- When it receives a new challenge, it emits `ChallengePublished` with the fields defined in the contract, written through the transactional outbox in the same transaction as the challenge.
+- When it receives a new challenge, it emits `ChallengePublished` with the full definition, written through the transactional outbox in the same transaction as the challenge.
 - Provides a bootstrap endpoint such as `GET /api/v1/challenges/snapshot` that returns the current state (latest version) of all challenges, paginated. It is for service-to-service use and is not routed through the public ingress. A service that lost its copy, for example after a reboot or when started for the first time, rebuilds it from this endpoint.
 - Serves the challenge and its questions to the frontend directly.
 - Does not validate submissions.
@@ -277,7 +277,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 Validation lives in `participation`, against a read-only copy of the challenges that it builds from events. `challenge` does not validate and is not called when a user completes a challenge. This means:
 - `participation` does not depend on `challenge` at runtime, except for the bootstrap at startup. If `challenge` is down, users can still complete the challenges `participation` already knows.
 - The copy is eventually consistent. A newly created challenge may be unknown to `participation` for a short time, and a submission for it is rejected until the event arrives.
-- `participation` has to understand what it receives (questions and validation rules), so the exact fields are a contract between the two services, documented in `api/`. The databases are not coupled: `participation` stores the received fields in its own tables. A change to the contract is a change to both services, see 1.12 item 11 for how new challenge types are introduced.
+- `participation` has to understand the definition of a challenge (questions and validation rules), so the shape of the definition is part of the contract between the two services, documented in `api/`. How this stays manageable as challenge types grow is an open decision, see 1.12 item 11.
 - The copy holds only what validation needs (type, validity window, status, questions and their rules), never budget, goal, or progress. Those stay in `challenge`.
 - Validation at completion and the later budget or goal check in the `ChallengeCompleted` handler can disagree, for example if the challenge runs out of budget in between. A valid submission that contributes nothing to a donation is a normal outcome, not an error.
 
@@ -290,7 +290,7 @@ Validation lives in `participation`, against a read-only copy of the challenges 
 4. `donation-impact` consumes `DonationAuthorized` idempotently, creates the ledger entry, and updates the impact view.
 5. The frontend fetches updated progress and impact from the REST APIs.
 
-Note on the transactional outbox: each service that publishes events writes them into an `outbox` table in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. It is not part of Stage 1.
+Note on the transactional outbox: each service that publishes events writes them into an `outbox` table (an `outbox` collection in `challenge_db`) in the same transaction as the business change. A small publisher loop reads the outbox and publishes to RabbitMQ. This is how "DB write succeeded but event lost" is avoided. It is not part of Stage 1.
 
 ### 2.3 Delivery stages
 

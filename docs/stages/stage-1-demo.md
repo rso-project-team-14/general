@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 621c6d492161317cd92f7cd856ea22e25c8d0c1221b5856cfc896fb269745f9e -->
+<!-- sha256: 6237a98b5a9f359cae54398581e384e785a808316278924ff80798a53d510eab -->
 
 Back to [plan.md](../../plan.md).
 
@@ -13,10 +13,10 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 ### In scope
 - Four Go services (`company-membership`, `challenge`, `participation`, `donation-impact`), each with:
   - `GET /healthz`: process is alive.
-  - `GET /readyz`: can reach its own PostgreSQL database and RabbitMQ.
+  - `GET /readyz`: can reach its own database (PostgreSQL, or MongoDB for `challenge`) and RabbitMQ.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
-- One PostgreSQL instance with four logical databases (`company_db`, `challenge_db`, `participation_db`, `impact_db`), one per service, all empty.
+- One PostgreSQL instance with three logical databases (`company_db`, `participation_db`, `impact_db`) and one MongoDB instance with `challenge_db`, one database per service, all empty.
 - One RabbitMQ instance.
 - Docker image for each service and for the frontend.
 - Deployment to the cloud environment (AKS, with Helm and a basic GitHub Actions pipeline), so the page is reachable from the internet and shows all four services answering.

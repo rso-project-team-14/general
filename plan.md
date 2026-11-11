@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 7433716cf97ded5186c970ff8cedc4a85c1f95088f335ec905456a2b96203430 -->
+<!-- sha256: a37052e8eb9a37b569845a90528e690d28b331cb6b5d094625fba62910926a0e -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -106,6 +106,8 @@ TBD
 - **Graceful shutdown:** on SIGTERM the service stops accepting requests, finishes in-flight work, closes its RabbitMQ consumer, then exits.
 
 ### 1.7 Messaging contract
+
+> **Not finished.** This plan for the RabbitMQ events is a first draft and will surely be reworked. Treat the exchange, routing keys, event names, payloads, and delivery rules below as provisional.
 
 - **Broker:** RabbitMQ.
 - **Exchange:** one topic exchange `butterfly.events`, durable.

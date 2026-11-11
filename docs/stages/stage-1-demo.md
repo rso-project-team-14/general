@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 0386e2b43c8dba45dbb9408fc4605abce929fb2ea66bdd4c8a94e95a18af41a1 -->
+<!-- sha256: 2c5532165d17b71ffb733dd1038aea39867f0adfbc56c9c1178167182bb4876d -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -39,7 +39,7 @@ This stage also starts following the structure of a Go service that is defined i
 
 ## Tests
 
-The tests in this stage are small and need no database, no RabbitMQ, and no network. There is no database and no client in this stage, so there is nothing to mock. They check that the structure works:
+The tests in this stage are small and need no database, no RabbitMQ, and no network. There is no database and no client in this stage, so there are no tests about databases and nothing to mock. They check that the structure works:
 
 - A test of `domain` that checks the ping answer.
 - A test of each `http` handler with a standard test HTTP server, checking the status code and the shape of the JSON.

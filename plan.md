@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: dd045651941cb5ee3c01733623cce1f2664459698a875428e83f5b3ddc529e03 -->
+<!-- sha256: d838c91d031f78489e1d69f5f086461cc0e46d9cd6b84cb2e1fdf98c03ec1829 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -383,7 +383,7 @@ Note on the transactional outbox: each service that publishes events writes them
 
 | Stage | Document | Goal |
 |---|---|---|
-| 1 | [docs/stages/stage-1-demo.md](docs/stages/stage-1-demo.md) | Basic demo: no business logic, the services only answer basic API requests and run in the cloud environment |
+| 1 | [docs/stages/stage-1-demo.md](docs/stages/stage-1-demo.md) | Basic backend demo: no business logic and no frontend, the services only answer basic API requests and run in the cloud environment |
 | 2 | [docs/stages/stage-2-mvp.md](docs/stages/stage-2-mvp.md) | Minimum viable product (to be planned) |
 | 3 | [docs/stages/stage-3-cloud.md](docs/stages/stage-3-cloud.md) | To be planned |
 

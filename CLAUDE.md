@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+<!-- sha256: 699d3715a7a1844ced4b27cf93d49b0c19301c63561f8673fc7a4676483e3c15 -->
+
 This is the `general` repository of the Butterfly Give project (team 14).
 
 ## What this repository is
@@ -11,6 +13,7 @@ This is the `general` repository of the Butterfly Give project (team 14).
 - `docs/stages/`: one document per delivery stage, linked from `plan.md`.
 - `api/`: the planned API contracts between the microservices (endpoints, request and response shapes, event payloads), written before implementation. These are contract documents, not OpenAPI specs.
 - `changelog/`: the log of every change to the files above, one file per entry (see below).
+- `scripts/`: small tools for maintaining the documents, such as `scripts/doc-hash.sh` (see "Document hashes").
 - Overall project management: GitHub issues that concern the whole project (agreements, practices, estimates, design).
 
 ### What does not belong here
@@ -40,6 +43,27 @@ Issues in the other repositories are named with the repository name as a prefix,
 5. **Keep it planning-level.** Describe what and why. Leave how to the service repositories.
 6. **Stage documents are separate files** in `docs/stages/` and are linked from `plan.md` section 2.3. Do not put stage detail into `plan.md`.
 7. **Language:** documents are written in English. The original project brief (`RSO_Ekipa14_Butterfly.pdf`) is in Slovenian.
+8. **Run `scripts/doc-hash.sh` after changing any document and before committing.** Never edit or calculate a hash by hand (see "Document hashes").
+
+## Document hashes
+
+Every Markdown document in this repository (including this file) carries a content hash on line 3, so that people and agents can tell whether a document changed without reading it. Exceptions: the files in `changelog/`, which are written once and not changed, and the PDF.
+
+Layout of a document:
+
+```
+line 1    # Title
+line 2    (blank)
+line 3    <!-- sha256: <64 hex characters> -->
+line 4+   content
+```
+
+- The hash is the SHA-256 of everything from **line 4 to the end of the file**, byte for byte. Lines 1 to 3 are not hashed, so changing only the title does not change the hash.
+- Files use LF line endings.
+- **Always use the script, never calculate by hand:**
+  - `scripts/doc-hash.sh` (or `scripts/doc-hash.sh update`) recalculates the hashes of all documents and writes them. A new document only needs a title on line 1 and a blank line 2. The script inserts the hash line.
+  - `scripts/doc-hash.sh check` verifies the hashes, changes nothing, and exits with 1 if any is wrong. This is the command for external systems and agents.
+- To see whether a document changed since you last read it, compare the hash on line 3 with the one you recorded. If they are equal, do not re-read the file.
 
 ## Changelog
 
@@ -58,5 +82,6 @@ Each service repository's own `CLAUDE.md` (and the frontend's) should tell Claud
 > Before implementing a feature, list the `changelog/` directory in the `general` repository (`rso-project-team-14/general`) and compare the newest file name with the one recorded below under "Last checked general changelog entry".
 > - If there are files newer than that one (file names start with a UTC timestamp, so alphabetical order is chronological), read them, then re-read the parts of `plan.md`, `docs/`, and `api/` they affect. Apply any changes that concern this repository, then update the "Last checked" line to the newest file name.
 > - If there are no newer files, do not re-read `plan.md`.
+> - Every document in `general` has its content hash on line 3 (`<!-- sha256: ... -->`, covering line 4 to the end). To check whether a specific document changed since you last read it, compare that line with the hash you recorded before reading the whole file.
 >
 > Last checked general changelog entry: _none yet_

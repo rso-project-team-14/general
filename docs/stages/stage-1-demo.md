@@ -1,5 +1,7 @@
 # Stage 1: Basic demo
 
+<!-- sha256: 6237a98b5a9f359cae54398581e384e785a808316278924ff80798a53d510eab -->
+
 Back to [plan.md](../../plan.md).
 
 ## Goal

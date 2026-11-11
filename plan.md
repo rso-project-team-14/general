@@ -1,5 +1,7 @@
 # Butterfly Give: Project Plan
 
+<!-- sha256: 8bb45784aba70b1fc8c00f46326b45cde6b8bbec4b273ccd5f00bb926a655e3d -->
+
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
 ---
@@ -67,6 +69,8 @@ Layout of `general`:
 general/
 ├── CLAUDE.md                       # rules for working in this repo
 ├── changelog/                      # one file per change, read by the other repos
+├── scripts/
+│   └── doc-hash.sh                 # recalculates and checks the content hash on line 3 of every document
 ├── plan.md                         # this file
 ├── docs/
 │   └── stages/                     # one document per delivery stage
@@ -291,4 +295,4 @@ Stages 2 and 3 are empty placeholders. They will be planned after Stage 1 is don
 - Unit tests for domain rules, integration tests for each service's REST API and DB layer.
 - The service's OpenAPI spec (in its own repository) matches the implementation, and any difference from the planned contract in `general` is logged in `changelog/`.
 - The stage document's checklist is fully ticked, or open items are moved to the next stage with a note.
-- `plan.md` is updated if an infrastructure decision changed.
+- `plan.md` is updated if an infrastructure decision changed. Documents in `general` carry a content hash on line 3, recalculated with `scripts/doc-hash.sh` (see `CLAUDE.md`).

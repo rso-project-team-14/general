@@ -1,6 +1,6 @@
 # Stage 2: Database and API call
 
-<!-- sha256: ac603289fd2aab02eda8aec0f550fcdc077201f5d38684523513187cc6711b10 -->
+<!-- sha256: d298a985ed0352f8e978004b983ebedf225d4bfdd1ab5b87797e93abd1b5d992 -->
 
 Back to [plan.md](../../plan.md). Previous stage: [Stage 1](stage-1-demo.md). Next stage: [Stage 3](stage-3-cloud.md).
 
@@ -23,7 +23,7 @@ Add what Stage 1 left out: connect the databases, and make an API call from a se
 
 ## Tests
 
-In every test the `store` and the `client` are replaced by mocks that implement the interfaces defined by `domain`. A test never uses a real database or makes a real outgoing call. `go test ./...` runs all of them with no database and no network.
+In every test the `store` and the `client` are replaced by mocks that implement the interfaces defined by `domain`. A test never uses a real database or makes a real outgoing call. `make test` runs all of them with no database and no network.
 
 - A test of `/health/ready` with a mock `store` check, once reporting the database as reachable and once as unreachable.
 - A test of the logic that makes the API call, with a mock `client`.
@@ -34,5 +34,5 @@ In every test the `store` and the `client` are replaced by mocks that implement 
 - [ ] `/health/ready` fails when the service's own database is unreachable
 - [ ] The API call works in the cloud through `internal/client`
 - [ ] The `store` and `client` directories follow the structure in `plan.md` section 1.4
-- [ ] Tests exist for the readiness check and for the call, with the database and the client mocked, and `go test ./...` passes with no database or network
+- [ ] Tests exist for the readiness check and for the call, with the database and the client mocked, and `make test` passes with no database or network
 - [ ] Everything runs in AKS as in Stage 1, now with the databases and the call

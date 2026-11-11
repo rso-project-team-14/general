@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 353d3be70713ac940d1a28159e6add7c4b53dfd026e7c9e28cb21d8b770f2f0d -->
+<!-- sha256: f7895a894d6e2ac2f17dc1b06b32d3b7e4e2944b55bd681726f7f1a36fb10422 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -109,6 +109,33 @@ Every Go service has the same internal structure in its own repository. The code
 - All Go code except `main.go` is under `internal/`, so other modules cannot import it. A package at the repository root, outside `internal/`, would be added only to publish something to other modules on purpose (see 1.12 item 14).
 - Directories for later needs (for example RabbitMQ messaging, which follows the same pattern as the store and the clients, and database migrations) are added next to the ones above when they are needed.
 - Adding an endpoint means adding the logic to `domain` and a handler and a route to `http`. `main.go` and the other directories stay as they are. The frontend is not a Go project and has its own layout.
+
+**Makefile of a Go service**
+
+Every Go service repository has a `Makefile` in its root, so that building and testing are the same command in every service. For now it has two targets and nothing more:
+
+| Target | What it does |
+|---|---|
+| `make build` | Compiles the service into the binary `bin/<service>`. |
+| `make test` | Runs the unit tests of the whole module. |
+
+The unit tests are always run through `make test`, by people, by agents, and by the pipeline. Other targets (for example linting or running the service) are added later, only when they are decided. The Makefile does not build Docker images and does not deploy.
+
+The reference `Makefile`, the same in every Go service apart from the service name:
+
+```makefile
+SERVICE := <service>
+
+.PHONY: build test
+
+build:
+	go build -o bin/$(SERVICE) ./cmd/$(SERVICE)
+
+test:
+	go test ./...
+```
+
+The `bin/` directory is not committed. The frontend is not a Go project, so this Makefile does not apply to it.
 
 ### 1.5 Local development environment
 
@@ -306,7 +333,7 @@ A service's `CLAUDE.md` should contain:
 2. **Link to `general`.** The repository `rso-project-team-14/general`, where the plan lives, with a pointer to `plan.md` as the source of truth. Nothing more. In particular, no summary of the plan, and no restating of the git workflow, which is in 1.13.
 3. **Dependencies on `general` (required).** A table of the files in `general` that this repository depends on, each with a link and the hash recorded when the file was last read in full. The files are `plan.md`, the API contracts it depends on (its own and those of the services it talks to), and the stage document it is implementing. The suggested text below defines how the hashes are checked.
 4. **Repository specifics.** Only what is specific to this repository and is not in the plan: the language version, the internal layout of the repository, where the migrations live, deviations from the conventions in 1.6, and implementation choices for the events and data rules in 1.7 and 1.8. Never restate a convention or rule from the plan (for example UUID v4, the port, the health endpoints, money in cents, the database-per-service rule). If this repository has to differ from the plan, say so here as a deviation, and report it as a change in `general`.
-5. **Commands.** How to build, test, lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
+5. **Commands.** Only the commands beyond the Makefile targets in 1.4 (`make build` and `make test`), such as how to lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
 6. **Rules for Claude.** Only rules about behavior that are not in the plan:
     - Stay within this service's responsibility.
     - Do not resolve an open decision from 1.12 silently. Raise it as an issue or a change in `general`.

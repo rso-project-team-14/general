@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: b4019114cacf59d159d982e2999fba5c17e04bb76d6c5af581a28a3d22d3f969 -->
+<!-- sha256: 0386e2b43c8dba45dbb9408fc4605abce929fb2ea66bdd4c8a94e95a18af41a1 -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -25,6 +25,7 @@ This stage also starts following the structure of a Go service that is defined i
   - `GET /health/live`: process is alive.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
 - The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer.
+- A `Makefile` in each Go service with the `build` and `test` targets from `plan.md` section 1.4.
 - Small tests of the logic and the handlers (see "Tests" below).
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
 - Done by the team: a Docker image for each service and for the frontend.
@@ -43,7 +44,7 @@ The tests in this stage are small and need no database, no RabbitMQ, and no netw
 - A test of `domain` that checks the ping answer.
 - A test of each `http` handler with a standard test HTTP server, checking the status code and the shape of the JSON.
 
-`go test ./...` runs all of them.
+`make test` runs all of them. The Makefile is defined in `plan.md` section 1.4.
 
 ## Checklist
 
@@ -52,12 +53,13 @@ Implementation (agents):
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
 - [ ] Each service has the structure from `plan.md` section 1.4 for what exists in this stage, with the logic and the HTTP side in separate directories
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
-- [ ] Tests exist for the logic and the handlers, and `go test ./...` passes with no database or RabbitMQ running
+- [ ] Each service has a `Makefile` with the `build` and `test` targets, and `make build` produces the binary
+- [ ] Tests exist for the logic and the handlers, and `make test` passes with no database or RabbitMQ running
 - [ ] Frontend page shows the ping result for all four services
 
 Deployment (the team):
 
 - [ ] Docker images build for all services and the frontend
 - [ ] Helm deploys the whole system into AKS
-- [ ] GitHub Actions builds the images, runs `go test ./...`, and deploys on merge to main
+- [ ] GitHub Actions builds the images, runs `make test`, and deploys on merge to main
 - [ ] The deployed page shows all four services answering from the cloud

@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 44ac9fb0995177c2b805c306c249084827178055867f847ff6c6cf627bcf540f -->
+<!-- sha256: 9decc6691311a12bd26c0e7aceb0ac8d6e008d25f62239088c286b6266cc1582 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -208,7 +208,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 
 ### 1.9 Security and privacy
 
-- Authentication and authorization model: **open decision**, see 1.12.
+- Authentication and authorization model: **open decision**.
 - Aggregated company views must never expose individual employee names or IDs. The Donation & Impact service enforces this in its read API. Company views contain counts and sums only.
 - Invite codes are random, single-company, expire, and have a use limit.
 - Secrets (database passwords, RabbitMQ credentials) live in Kubernetes Secrets, not in Helm values or the repo.
@@ -235,11 +235,11 @@ GitHub Actions workflows:
 3. **Promotion to production:** the same image tags that passed in `staging` are deployed to the `production` environment. The `production` environment can require an approval before the job runs.
 4. **Manual:** deploy a chosen image tag to a chosen environment (`staging` or `production`).
 
-Container registry: **open decision**, see 1.12. Default assumption: Azure Container Registry.
+Container registry: **open decision**. Default assumption: Azure Container Registry.
 
 ### 1.12 Open decisions
 
-These need an answer from the team or the course staff. Each stage document lists the decisions it depends on.
+These need an answer from the team or the course staff.
 
 1. **Authentication:** Options are (a) a simple login in the Company & Membership service with JWT issued by that service, (b) an external identity provider such as Microsoft Entra ID. Not needed for Stage 1.
 2. **Hosting of the data services:** PostgreSQL and MongoDB are already decided as managed services (see 1.10), but which managed products to use is still to be chosen. RabbitMQ hosting is also still to be decided: run it inside the cluster (installed with Helm or an operator), or use a managed RabbitMQ service from a third party.

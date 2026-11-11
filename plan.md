@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 9decc6691311a12bd26c0e7aceb0ac8d6e008d25f62239088c286b6266cc1582 -->
+<!-- sha256: 8796eb3ad2fad6e5f2b1e6af9049270100fb79c8a081daf4c837761bd6a4d5ae -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -87,11 +87,12 @@ general/
 
 **Structure of a Go service**
 
-Every Go service has the same internal structure in its own repository. The code is split into directories by responsibility, so the logic, the HTTP side, and the database side are separate. The same structure keeps the services easy to review and to compare, and lets new endpoints be added without reorganizing anything. The services start following it in Stage 1 (`docs/stages/stage-1-demo.md`), with the directories needed there. The `store` and `client` directories are added in Stage 2 (`docs/stages/stage-2-database-and-calls.md`).
+Every Go service has the same internal structure in its own repository. The code is split into directories by responsibility, so the logic, the HTTP side, and the database side are separate. The same structure keeps the services easy to review and to compare, and lets new endpoints be added without reorganizing anything. The services start following it in Stage 1 (`docs/stages/stage-1-demo.md`), with the directories needed there. The `store`, `client`, and `migrations` directories are added in Stage 2 (`docs/stages/stage-2-database-and-calls.md`).
 
 ```
 <service-repository>/
 ├── cmd/<service>/main.go      # starts the program, wiring only
+├── migrations/                # versioned database migrations, applied at startup
 └── internal/
     ├── config/                # reads the configuration from environment variables
     ├── domain/                # the logic of the service
@@ -103,12 +104,12 @@ Every Go service has the same internal structure in its own repository. The code
 - `cmd/<service>/main.go` reads the configuration, builds the parts, and starts the HTTP server. It contains no logic.
 - `internal/domain` is the logic. It knows nothing about HTTP. It reaches the database through an interface that it defines itself, which lists what the logic needs from storage (for example "save this", "load that", "is the database reachable").
 - `internal/http` is the HTTP side: the router, the handlers, the middleware, and the endpoints. A handler only translates between HTTP and the logic. It holds no rules.
-- `internal/store` is the database side. It implements the interface that `domain` defines. Because the logic only sees the interface, a test can replace the store with a mock.
+- `internal/store` is the database side. It implements the interface that `domain` defines. Because the logic only sees the interface, a test can replace the store with a mock. When the service starts, the store also applies the migrations from the `migrations/` directory.
 - `internal/client` is the outgoing calls, to other services or to outside. It only makes the call: it builds the request, sets timeouts, passes the `X-Request-ID` header on, and turns the response into the logic's own types and errors. It holds no rules. Like the store, it implements an interface that `domain` defines, so a test can replace it with a mock. With several targets it gets one subdirectory per target, such as `client/challenge/`.
 - `internal/config` reads the configuration variables from 1.6 and hands them to the other parts.
 - Dependencies point one way: `http` calls `domain`, and `domain` calls the store and the clients through interfaces that it defines. `store`, `client`, and `domain` know nothing about `http`, and `domain` does not import the `store` or `client` packages. `main.go` connects the parts: it creates the store and the clients and passes them to the logic, and passes the logic to the HTTP side. A handler never uses the store or a client directly, so even the readiness check goes through the logic.
 - All Go code except `main.go` is under `internal/`, so other modules cannot import it. A package at the repository root, outside `internal/`, would be added only to publish something to other modules on purpose (see 1.12 item 14).
-- Directories for later needs (for example RabbitMQ messaging, which follows the same pattern as the store and the clients, and database migrations) are added next to the ones above when they are needed.
+- Directories for later needs (for example RabbitMQ messaging, which follows the same pattern as the store and the clients) are added next to the ones above when they are needed.
 - Adding an endpoint means adding the logic to `domain` and a handler and a route to `http`. `main.go` and the other directories stay as they are. The frontend is not a Go project and has its own layout.
 
 **Makefile of a Go service**
@@ -333,8 +334,8 @@ A service's `CLAUDE.md` should contain:
 1. **Purpose and place.** Which service this repository is (the short name from 1.3) and a link to its part of section 2.1 once that section is written. Do not copy the description of its responsibility.
 2. **Link to `general`.** The repository `rso-project-team-14/general`, where the plan lives, with a pointer to `plan.md` as the source of truth. Nothing more. In particular, no summary of the plan, and no restating of the git workflow, which is in 1.13.
 3. **Dependencies on `general` (required).** A table of the files in `general` that this repository depends on, each with a link and the hash recorded when the file was last read in full. The files are `plan.md`, the API contracts it depends on (its own and those of the services it talks to), and the stage document it is implementing. The suggested text below defines how the hashes are checked.
-4. **Repository specifics.** Only what is specific to this repository and is not in the plan: the language version, the internal layout of the repository, where the migrations live, deviations from the conventions in 1.6, and implementation choices for the events and data rules in 1.7 and 1.8. Never restate a convention or rule from the plan (for example UUID v4, the port, the health endpoints, money in cents, the database-per-service rule). If this repository has to differ from the plan, say so here as a deviation, and report it as a change in `general`.
-5. **Commands.** Only the commands beyond the Makefile targets in 1.4 (`make build` and `make test`), such as how to lint, run, and apply migrations. Marked TBD until local development (1.5) is decided.
+4. **Repository specifics.** Only what is specific to this repository and is not in the plan: the language version, the internal layout of the repository, deviations from the conventions in 1.6, and implementation choices for the events and data rules in 1.7 and 1.8. Never restate a convention or rule from the plan (for example UUID v4, the port, the health endpoints, money in cents, the database-per-service rule). If this repository has to differ from the plan, say so here as a deviation, and report it as a change in `general`.
+5. **Commands.** Only the commands beyond the Makefile targets in 1.4 (`make build` and `make test`), such as how to lint and run. Migrations are applied at startup, so there is no command for them. Marked TBD until local development (1.5) is decided.
 6. **Rules for Claude.** Only rules about behavior that are not in the plan:
     - Stay within this service's responsibility.
     - Do not resolve an open decision from 1.12 silently. Raise it as an issue or a change in `general`.

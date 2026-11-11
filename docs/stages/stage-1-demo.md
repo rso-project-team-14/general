@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 0386e2b43c8dba45dbb9408fc4605abce929fb2ea66bdd4c8a94e95a18af41a1 -->
+<!-- sha256: a0ff7f0012d610feebd6d7cc319f68f4232410d3e9c0aa0ab58caee09525564c -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -8,7 +8,7 @@ Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-cal
 
 Verify that the Kubernetes cluster and the APIs work. The frontend and the backend run in the cloud, and the frontend page calls the APIs and shows the answers. There is **no Butterfly Give business logic**, **no database**, and **no calls from one service to another** in this stage. The database and the calls come in Stage 2.
 
-This stage also starts following the structure of a Go service that is defined in `plan.md` section 1.4, so the services already have the shape they will keep later. Only the directories needed now are created (`cmd`, `config`, `domain`, and `http`). The `store` and `client` directories are added in Stage 2, next to them, without reorganizing anything.
+This stage also starts following the structure of a Go service that is defined in `plan.md` section 1.4, so the services already have the shape they will keep later. Only the directories needed now are created (`cmd`, `config`, `domain`, and `http`). The `store`, `client`, and `migrations` directories are added in Stage 2, next to them, without reorganizing anything.
 
 ## Who does what
 

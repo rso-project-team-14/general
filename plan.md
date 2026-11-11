@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: e8a8c547d1a848a96b195e304d530e51208f50e14a161b2994e935f6e63344d4 -->
+<!-- sha256: 7433716cf97ded5186c970ff8cedc4a85c1f95088f335ec905456a2b96203430 -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -94,7 +94,10 @@ TBD
 
 - **Ports:** HTTP on 8080 inside the container. Ports are set through the Kubernetes Service, not hard-coded elsewhere.
 - **Base path:** REST endpoints live under `/api/v1/...`.
-- **Health:** `GET /healthz` (process alive) and `GET /readyz` (DB and RabbitMQ reachable).
+- **Health:** three endpoints, one for each Kubernetes probe type.
+  - `GET /health/started`: the service finished starting (configuration loaded, migrations applied, connections made, and for `participation` the challenge bootstrap complete). Until it succeeds, Kubernetes does not run the other two probes.
+  - `GET /health/ready`: the service can handle requests now (its database and RabbitMQ are reachable). If it fails, the pod gets no traffic but is not restarted.
+  - `GET /health/live`: the process is alive and not stuck. It checks no dependencies. If it fails, the container is restarted.
 - **Configuration variables (per service):** `PORT`, `DATABASE_URL`, `RABBITMQ_URL`, `LOG_LEVEL`, `SERVICE_NAME`. `DATABASE_URL` is a PostgreSQL connection string, except in `challenge`, where it is a MongoDB connection string.
 - **Logging:** structured JSON logs to stdout. Each request has an `X-Request-ID` header. It is generated at the edge if missing, returned in responses, and included in every log line.
 - **Errors:** RFC 7807 `application/problem+json` for all 4xx and 5xx responses.
@@ -162,7 +165,7 @@ Payloads are versioned through the `version` field. A breaking change means a ne
 - One Deployment and one Service per microservice and one for the frontend.
 - One Helm chart per service, plus an umbrella chart that deploys all of them together.
 - Resources per container: small requests and limits, enough to fit a student-sized AKS node pool.
-- Readiness and liveness probes use `/readyz` and `/healthz`.
+- Startup, readiness, and liveness probes use `/health/started`, `/health/ready`, and `/health/live`.
 - Configuration in ConfigMaps, credentials in Secrets, both referenced from the Deployment. The image itself carries no environment-specific values.
 - An Ingress routes `/` to the frontend and `/api/` to the services, with path-based routing to each service.
 - PostgreSQL, MongoDB, and RabbitMQ: **open decision**, see 1.12. Options are Helm-deployed in-cluster or managed services.
@@ -195,7 +198,7 @@ These need an answer from the team or the course staff. Each stage document list
 10. **Stale copy in `participation`:** the copy of the challenges is eventually consistent. How long a gap is acceptable between a challenge being created or closed in `challenge` and `participation` knowing about it? Is a periodic re-sync from the snapshot endpoint needed as a safety net, or is the bootstrap at startup enough?
 11. **Shape of the contract and new challenge types:** the `ChallengePublished` contract is fixed, and `participation` stores it in normal columns. Challenges can still differ in content (survey questions now, other types later). How are the questions and validation rules expressed as fixed fields? And how is a new challenge type added later, for example as a new contract version that `participation` handles next to the old one? Survey is the only type for now.
 12. **Should `participation` stay a separate service?** It now owns validation and a copy of the challenges, so it is no longer thin. The earlier concern is mostly gone. Revisit only if keeping the copy in sync proves painful.
-13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Readiness [`participation` not ready until the bootstrap is complete].
+13. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Startup [`participation` not started until the bootstrap is complete].
 12. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.
 
 ### 1.13 Git workflow and environments
@@ -248,7 +251,7 @@ Detailed behavior, endpoints, and data models are defined in the stage documents
 
 **Participation (`participation`)**
 - Keeps a **read-only copy of the challenges** in `participation_db`, built from `ChallengePublished` events. It applies an event only if its `version` is higher than the stored one, so duplicates and old events are harmless.
-- Bootstraps the copy at startup: it subscribes to the events first, then loads everything from the `challenge` snapshot endpoint, applying the same version rule. This way a reboot or a first start cannot leave gaps. It should report not ready (`/readyz`) until the bootstrap is complete.
+- Bootstraps the copy at startup: it subscribes to the events first, then loads everything from the `challenge` snapshot endpoint, applying the same version rule. This way a reboot or a first start cannot leave gaps. It should report not started (`/health/started`) until the bootstrap is complete.
 - Starts a challenge for a user and records the answers.
 - Validates every submission itself, against its copy: the validity window, the challenge status, and the answers against the questions. A challenge it does not know is rejected with a clear error.
 - Enforces repeat-prevention: a user cannot complete the same challenge twice inside its window.

@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: 6237a98b5a9f359cae54398581e384e785a808316278924ff80798a53d510eab -->
+<!-- sha256: 2dbe72e0df8e5d1fd4f1a5d690362ec1c763854dbbe30331275b38847a4336ee -->
 
 Back to [plan.md](../../plan.md).
 
@@ -12,8 +12,9 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 
 ### In scope
 - Four Go services (`company-membership`, `challenge`, `participation`, `donation-impact`), each with:
-  - `GET /healthz`: process is alive.
-  - `GET /readyz`: can reach its own database (PostgreSQL, or MongoDB for `challenge`) and RabbitMQ.
+  - `GET /health/started`: the service finished starting.
+  - `GET /health/ready`: can reach its own database (PostgreSQL, or MongoDB for `challenge`) and RabbitMQ.
+  - `GET /health/live`: process is alive.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
 - Frontend page that calls `/api/v1/ping` on all four services and shows each response (green or red per service).
 - One PostgreSQL instance with three logical databases (`company_db`, `participation_db`, `impact_db`) and one MongoDB instance with `challenge_db`, one database per service, all empty.
@@ -27,8 +28,8 @@ Verify that the whole setup works in the cloud environment. There is **no Butter
 ## Checklist
 
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4 (the location of the deployment files is open, see `plan.md` 1.12 item 12)
-- [ ] Each service responds on `/healthz`, `/readyz`, and `/api/v1/ping`
-- [ ] `/readyz` fails when the service's own database or RabbitMQ is unreachable
+- [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
+- [ ] `/health/ready` fails when the service's own database or RabbitMQ is unreachable
 - [ ] Frontend page shows the ping result for all four services
 - [ ] Docker images build for all services and the frontend
 - [ ] Helm deploys the whole system into AKS

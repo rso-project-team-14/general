@@ -29,7 +29,6 @@ This is the `general` repository of the Butterfly Give project (team 14).
 | `participation-service` | Participation service |
 | `impact-service` | Donation & Impact service |
 | `frontend` | React + TypeScript frontend (repository to be created) |
-| `deploy` | Helm charts, deploy workflows, and the staging and production environments (repository to be created) |
 
 Issues in the other repositories are named with the repository name as a prefix, for example `[challenge-service] Create CLAUDE.md file`.
 

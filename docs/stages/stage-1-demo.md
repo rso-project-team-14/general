@@ -1,6 +1,6 @@
 # Stage 1: Basic demo
 
-<!-- sha256: b1238514c982d8229b35611e49a1f61ca94afe0464195097da046e5110db6cb0 -->
+<!-- sha256: 951b14962aea3717bd374d5c8f8c182629d93d8018c1207bf387bb22552d4a08 -->
 
 Back to [plan.md](../../plan.md). Next stage: [Stage 2](stage-2-database-and-calls.md).
 
@@ -25,6 +25,7 @@ This stage also starts following the structure of a Go service that is defined i
   - `GET /health/live`: process is alive.
   - `GET /api/v1/ping`: returns a static JSON response with the service name, version, and time, for example `{"service": "participation", "version": "0.1.0", "time": "..."}`.
 - The structure of a Go service from `plan.md` section 1.4, created in all four services. In this stage the logic only builds the ping answer.
+- An OpenAPI spec in each service repository that describes its health and ping endpoints. It is written together with the service.
 - A `Makefile` in each Go service with the `build` and `test` targets from `plan.md` section 1.4.
 - Small tests of the logic and the handlers (see "Tests" below).
 - Frontend page that calls the ping endpoint of each of the four services through the gateway (the paths are in `plan.md` section 1.10) and shows each response (green or red per service).
@@ -35,7 +36,7 @@ This stage also starts following the structure of a Go service that is defined i
 - Databases. No service connects to a database in this stage, so there is no `store`.
 - Calls from a service to another service or to outside. There is no `client` in this stage.
 - RabbitMQ. It is not set up in this stage.
-- API specs. Nothing is written to the `api/` directory of `general` in this stage, and no OpenAPI spec is written. The health and ping endpoints are simple and need no spec. The specs are written later, when the business logic is implemented.
+- Contract documents in the `api/` directory of `general`. The health and ping endpoints are simple, so they are implemented without a planned contract to generate them from. These documents are written later, when the business logic is planned.
 - Everything else: authentication, companies, challenges, participation, donations, impact, events, business rules, database tables, seed data.
 
 ## Tests
@@ -54,6 +55,7 @@ Implementation (agents):
 - [ ] The four service repositories and the `frontend` repository set up as described in `plan.md` 1.4
 - [ ] Each service has the structure from `plan.md` section 1.4 for what exists in this stage, with the logic and the HTTP side in separate directories
 - [ ] Each service responds on `/health/started`, `/health/ready`, `/health/live`, and `/api/v1/ping`
+- [ ] Each service has an OpenAPI spec for these endpoints in its own repository
 - [ ] Each service has a `Makefile` with the `build` and `test` targets, and `make build` produces the binary
 - [ ] Tests exist for the logic and the handlers, and `make test` passes with no database or RabbitMQ running
 - [ ] Frontend page shows the ping result for all four services

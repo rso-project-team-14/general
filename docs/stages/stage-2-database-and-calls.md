@@ -1,6 +1,6 @@
 # Stage 2: Database and API call
 
-<!-- sha256: 584c656f928c6d89f60e74d7fa773f569877b1e0226976f99c99fc5e2327e60c -->
+<!-- sha256: 305512170483eea35e9299aa9b17473fb8bea5c52339acddc062632987497599 -->
 
 Back to [plan.md](../../plan.md). Previous stage: [Stage 1](stage-1-demo.md). Next stage: [Stage 3](stage-3-cloud.md).
 
@@ -14,12 +14,13 @@ Add what Stage 1 left out: connect the databases, and make an API call from a se
 - Each service connects to its own database, managed PostgreSQL, or MongoDB for `challenge` (see `plan.md` 1.10 for how the connection details reach the services), through a real `internal/store`. The databases stay empty: one database per service, no business tables.
 - `GET /health/ready` now also checks that the service's own database is reachable, and fails when it is not.
 - An API call from a service to another service, or to an external API, through a real `internal/client`. Which call is made is still to be decided.
+- The OpenAPI spec of each service, in its own repository, is kept up to date with its endpoints.
 - The structure from `plan.md` section 1.4 is now complete, with the `store`, `client`, and `migrations` directories added next to the ones from Stage 1. The step that applies migrations at startup is in place, but there are no business tables yet, so there is nothing for it to create.
 - The database and the client are mocked in the tests (see "Tests" below).
 
 ### Out of scope
 - RabbitMQ and events.
-- API specs. As in Stage 1, nothing is written to the `api/` directory of `general` in this stage, and no OpenAPI spec is written. The specs are written when the business logic is implemented.
+- Contract documents in the `api/` directory of `general`. As in Stage 1, they are not written in this stage, and they are written later, when the business logic is planned.
 - Business logic, authentication, and everything else not named above.
 
 ## Tests

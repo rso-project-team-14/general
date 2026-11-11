@@ -1,6 +1,6 @@
 # Butterfly Give: Project Plan
 
-<!-- sha256: 15b5e86ddbe0f137db6ec66e8d5acacb53d0f95685d035cf3c54a8d88603bc76 -->
+<!-- sha256: 8cb74dc9e786b450cf93b602292257cdea383018a52a08efb98a6d82458403de -->
 
 This plan is a living document. Infrastructure is shared by every microservice. Service internals and delivery stages are at the end.
 
@@ -31,7 +31,7 @@ Butterfly Give is a cloud-native prototype that connects companies, their employ
 | Service | Short name | Owns database | Responsibility |
 |---|---|---|---|
 | Company & Membership | `company-membership` | `company_db` | Companies, memberships, invite codes, user roles within a company |
-| Challenge | `challenge` | `challenge_db` (MongoDB) | Challenge templates and challenges, questions, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision. Publishes challenges to other services as events and through a bootstrap endpoint |
+| Challenge | `challenge` | `challenge_db` (MongoDB) | Challenge templates and challenges, questions, business rules (validity, goal, budget, amount per success), group progress, donation trigger decision. Publishes challenges to other services as events and through the snapshot endpoint |
 | Participation | `participation` | `participation_db` | Starting and completing challenges, survey answers, **validation of submissions** against its own read-only copy of the challenges, repeat-prevention |
 | Donation & Impact | `donation-impact` | `impact_db` | Charity organizations, donation ledger, personal and aggregated impact |
 
@@ -42,7 +42,7 @@ Communication rules:
 - Asynchronous calls: RabbitMQ events, see section 1.7.
 - A service never reads or writes another service's database.
 - A service that needs data from another service calls its REST API or subscribes to events.
-- `participation` does not call `challenge` while users complete challenges. It keeps its own read-only copy of the challenges, built from `ChallengePublished` events. The only synchronous call is the bootstrap at startup (see 1.7 and 1.12 item 12).
+- `participation` does not call `challenge` while users complete challenges. It keeps its own read-only copy of the challenges, built from `ChallengePublished` events. The only synchronous call is the snapshot request at startup (see 1.7 and 1.12 item 12).
 
 ### 1.4 Repositories
 
@@ -197,6 +197,18 @@ Event catalog:
 
 Payloads are versioned through the `version` field. A breaking change means a new version number, and the old version stays supported until all consumers have moved on.
 
+**Read-only copy of the challenges in `participation` (decided)**
+
+`participation` validates submissions itself, against its own read-only copy of the challenges. It does not call `challenge` when a user completes a challenge.
+
+- **The copy is built from events.** When `challenge` receives a new challenge, it emits `ChallengePublished`. `participation` consumes the event and updates its copy in its own database. It applies an event only if its `version` is higher than the stored one, so duplicate and old events do no harm.
+- **The copy holds only the contract fields.** These are the fields `participation` needs for validation (type, validity window, status, questions and their rules), as fixed by the contract in `api/`. It never holds the budget, the goal, or the progress, which stay in `challenge`. `participation` never reads or writes the database of `challenge`.
+- **Bootstrap through the snapshot endpoint.** `challenge` provides a service-to-service endpoint, `GET /api/v1/challenges/snapshot`, that returns the current state (the latest version) of all challenges, paginated. It is not routed through the public gateway. A `participation` that starts for the first time, or restarts and has lost its copy, rebuilds the copy from it: it subscribes to the events first, then loads the snapshot, applying the same version rule, so no event is missed. `/health/started` stays failing until this bootstrap is complete (see 1.6).
+- **Consequences.** `participation` keeps working when `challenge` is down, and only misses new challenges until it is back. The copy is eventually consistent: a challenge created a moment ago may be unknown to `participation`, and a submission for it is rejected until the event arrives.
+- **`participation` stays a separate service.** Per-user attempts and group-wide counters in `challenge` are different consistency problems, and `participation` owns validation and the copy, so it is not a thin service.
+
+The open questions about this design are in 1.12 (items 10, 11, and 12).
+
 ### 1.8 Data ownership and schema rules
 
 - One logical database per service. The three PostgreSQL databases live in the same PostgreSQL instance locally and in AKS. `challenge_db` lives in a separate MongoDB instance. Each service has its own credentials with access to its own database only.
@@ -251,7 +263,7 @@ These need an answer from the team or the course staff.
 7. **Donation timing:** does a donation fire on every successful completion (capped by the remaining budget, using the amount per success), or once when the group goal is reached? This decides the core logic of the `challenge` service.
 8. **Personal challenges:** do they use the same flow as group challenges? If yes, is the goal of a personal challenge just one completion by that user, and does it also trigger a donation?
 9. **User identity in events:** should `DonationAuthorized` (and `ChallengeCompleted`) carry `userId`, so `donation-impact` can attribute personal impact, with anonymity enforced only in its company-facing read API? Or should events carry no user data, which makes personal impact harder to compute?
-10. **Stale copy in `participation`:** the copy of the challenges is eventually consistent. How long a gap is acceptable between a challenge being created or closed in `challenge` and `participation` knowing about it? Is a periodic re-sync from the snapshot endpoint needed as a safety net, or is the bootstrap at startup enough?
+10. **Stale copy in `participation`:** the copy of the challenges is eventually consistent. How long a gap is acceptable between a challenge being created or closed in `challenge` and `participation` knowing about it? Is a periodic re-sync from the snapshot endpoint needed as a safety net, or is the snapshot at startup enough?
 11. **Shape of the contract and new challenge types:** the `ChallengePublished` contract is fixed, and `participation` stores it in normal columns. Challenges can still differ in content (survey questions now, other types later). How are the questions and validation rules expressed as fixed fields? And how is a new challenge type added later, for example as a new contract version that `participation` handles next to the old one? Survey is the only type for now.
 12. **Replication details (proposed defaults in brackets):** event granularity [one `ChallengePublished` event with the contract fields per new version]. Events for edit, close, and withdraw [not decided; a withdrawn or closed challenge needs some event, otherwise `participation` keeps accepting it]. Order and duplicates [apply only if the version is higher]. Snapshot endpoint shape [paginated, latest version of every challenge, optional filter by company]. Startup [`participation` not started until the bootstrap is complete].
 13. **Where do the deployment files live?** The umbrella Helm chart and the local docker-compose stack need a home: a new `deploy` repository, or each service repository with its own chart plus one repository for the umbrella chart. They do not go into `general`, which is documentation only.

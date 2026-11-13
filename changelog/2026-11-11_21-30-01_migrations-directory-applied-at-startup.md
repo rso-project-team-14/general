@@ -1,0 +1,5 @@
+# Migrations directory in the structure, migrations applied at startup
+
+Date: 2026-11-11 21:30:01 UTC
+
+Decided that database migrations are applied when the service starts and that every Go service has a `migrations/` directory. Added `migrations/` to the structure of a Go service in `plan.md` section 1.4 (at the repository root, next to `cmd/` and `internal/`), said that the store applies the migrations at startup, and removed "database migrations" from the list of directories added later. This now matches 1.6 (`/health/started` includes "migrations applied") and 1.8 (migration files in `migrations/`, applied at startup), which are unchanged. In 1.14, removed "where the migrations live" from the repository specifics and "apply migrations" from the commands, because both are now defined in the plan. The `migrations` directory is added in Stage 2 together with `store` and `client`: updated the Stage 1 goal and the Stage 2 scope and checklist, noting that there are no business tables yet. This follows a decision made in conversation.

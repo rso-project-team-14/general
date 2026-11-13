@@ -1,0 +1,5 @@
+# Nothing from the plan is repeated in the repositories' CLAUDE.md
+
+Date: 2026-11-11 20:24:12 UTC
+
+A repository's `CLAUDE.md` must not repeat anything that is written in `plan.md`, so the plan stays the only copy. Rewrote `plan.md` section 1.14 accordingly. The Stack section of the standard sections now only points to sections 1.2 and 1.6 and lists what the plan does not say (Go version, libraries, build tooling), instead of repeating the stack and the database. The list of contents went from ten items to six: purpose and place and the link to `general` are now links only, the contracts item was merged into the dependency table, and the conventions, data, and events items became one "repository specifics" item that forbids restating conventions such as UUID v4 or the port. The git and pull requests item was removed because 1.13 already covers it. "Rules for Claude" keeps only behavior rules not in the plan. The frontend uses the same items. Added a sentence to the "For the other repositories" section of `CLAUDE.md` in `general`. This follows a decision made in conversation.

@@ -1,0 +1,5 @@
+# Participation validates from a read-only copy of the challenges
+
+Date: 2026-11-11 16:56:57 UTC
+
+Reverses the earlier decision that validation lives in `challenge`. `challenge` no longer validates submissions and is not called when a user completes a challenge. `participation` keeps a read-only copy of the challenges in `participation_db`, built from a new `ChallengePublished` event (full definition, versioned, emitted through the outbox when `challenge` receives a new challenge), and validates submissions itself. For bootstrap, `challenge` gets a service-to-service snapshot endpoint (`GET /api/v1/challenges/snapshot`) that returns the current state of all challenges, so `participation` can rebuild its copy after a reboot or a first start. Removed `validate-submission`. Updated `plan.md` sections 1.3, 1.7 (event catalog), 1.8 (read-only copies), 2.1, and 2.2. Open decisions 10 to 12 were rewritten (stale copy, validation rules for new challenge types, whether `participation` stays separate), and item 13 was added (replication details: edit, close, and withdraw events, snapshot shape, readiness).

@@ -1,0 +1,5 @@
+# The client is part of the service structure, and Stage 1 mocks the database and the client
+
+Date: 2026-11-11 20:55:19 UTC
+
+Added `internal/client` (outgoing calls to other services or to outside) to the structure of a Go service in `plan.md` section 1.4. Like the store, it implements an interface that `domain` defines, `main.go` passes it to the logic, and a handler never uses it directly. Noted that all Go code except `main.go` is under `internal/`, and that a package at the repository root would only be added to publish something to other modules on purpose. Added open decision 14 (shared client code, tied to issue #6), with each service writing its own `internal/client` as the default. In `docs/stages/stage-1-demo.md`, noted that the database (`store`) and the client (`client`) are mocked in the tests, with no real database or outgoing call, and updated the checklist item. This stage has no outgoing calls, so only the mock database is needed now. This follows a decision made in conversation.
